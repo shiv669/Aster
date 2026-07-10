@@ -14,7 +14,8 @@
     "pino": "^9.0.0",
     "zod": "^3.23.8",
     "groq-sdk": "^0.3.2",
-    "@aster/shared": "*"
+    "@aster/shared": "*",
+    "@aster/parser": "*"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
