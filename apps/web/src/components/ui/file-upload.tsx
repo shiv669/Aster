@@ -446,35 +446,13 @@ export const formatBytes = (bytes: number, decimals = 2): string => {
 }
 
 
-const initialFiles = [
-  {
-    name: "brochure.pdf",
-    size: 528737,
-    type: "application/pdf",
-    url: "https://originui.com",
-    id: "brochure.pdf-1744638436563-8u5xuls",
-  },
-  {
-    name: "cover.png",
-    size: 182873,
-    type: "image/png",
-    url: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop",
-    id: "cover.png-1744638436563-8u5xuls",
-  },
-  {
-    name: "report.xlsx",
-    size: 352873,
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    url: "https://originui.com",
-    id: "report.xlsx-1744638436563-8u5xuls",
-  },
-] satisfies {
+const initialFiles: {
   name: string
   size: number
   type: string
   url?: string
   id: string
-}[]
+}[] = []
 
 // ---------- Types ----------
 type UploadEntry = {
@@ -555,9 +533,13 @@ const getFileIcon = (entry: UploadEntry) => {
 }
 
 // ---------- Component ----------
-export default function DatasetUploader() {
+export default function DatasetUploader({
+  onParseSuccess
+}: {
+  onParseSuccess?: (data: any) => void
+}) {
   // Tunables
-  const maxSize = 20 * 1024 * 1024 // 20MB
+  const maxSize = 50 * 1024 * 1024 // 50MB
   const maxFiles = 20
   const [view, setView] = React.useState<"list" | "grid">("list")
   const [query, setQuery] = React.useState("")
@@ -580,11 +562,32 @@ export default function DatasetUploader() {
     },
   ] = useFileUpload({
     multiple: true,
-    maxFiles,
+    maxFiles: 20,
     maxSize,
     initialFiles,
-    // You can add `accept` here if your hook supports it
-    // accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt"
+    accept: ".csv",
+    onFilesAdded: async (newFiles) => {
+      if (newFiles.length > 0 && onParseSuccess) {
+        // Clone the file to prevent Chrome from revoking DataTransfer access before fetch completes
+        const originalFile = newFiles[0].file as File;
+        const file = new File([originalFile], originalFile.name, { type: originalFile.type });
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+          const json = await res.json();
+          if (json.success) {
+            onParseSuccess(json.data);
+          }
+        } catch (err) {
+          console.error("Upload failed", err);
+        }
+      }
+    }
   })
 
   React.useEffect(() => {
@@ -653,6 +656,25 @@ export default function DatasetUploader() {
     const url = getPreviewUrl(entry)
     if (!url) return
     window.open(url, "_blank", "noopener,noreferrer")
+  }
+
+  const previewOne = async (entry: UploadEntry) => {
+    if (!onParseSuccess) return;
+    const originalFile = entry.file as File;
+    const file = new File([originalFile], originalFile.name, { type: originalFile.type });
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const json = await res.json();
+      if (json.success) onParseSuccess(json.data);
+    } catch (err) {
+      console.error("Preview fetch failed", err);
+    }
   }
 
   const downloadSelected = () => {
@@ -891,11 +913,16 @@ export default function DatasetUploader() {
                     const percentOfMax = Math.min(100, Math.round((size / maxSize) * 100))
 
                     return (
-                      <TableRow key={entry.id} data-selected={isSelected || undefined}>
-                        <TableCell className="py-2">
+                      <TableRow 
+                        key={entry.id} 
+                        data-selected={isSelected || undefined}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => previewOne(entry)}
+                      >
+                        <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
-                            className="accent-foreground size-3.5"
+                            className="accent-foreground size-3.5 cursor-pointer"
                             checked={isSelected}
                             onChange={() => toggleOne(entry.id)}
                             aria-label={`Select ${name}`}
@@ -921,23 +948,13 @@ export default function DatasetUploader() {
                         <TableCell className="text-muted-foreground py-2">
                           {formatBytes(size)}
                         </TableCell>
-                        <TableCell className="py-2 text-right whitespace-nowrap">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-muted-foreground/80 hover:text-foreground size-8 hover:bg-transparent"
-                            aria-label={`Open ${name}`}
-                            onClick={() => url && window.open(url, "_blank", "noopener,noreferrer")}
-                            title="Open preview"
-                          >
-                            <ExternalLinkIcon className="size-4" />
-                          </Button>
+                        <TableCell className="py-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <Button
                             size="icon"
                             variant="ghost"
                             className="text-muted-foreground/80 hover:text-foreground size-8 hover:bg-transparent"
                             aria-label={`Download ${name}`}
-                            onClick={() => downloadOne(entry)}
+                            onClick={(e) => { e.stopPropagation(); downloadOne(entry); }}
                             title="Download"
                           >
                             <DownloadIcon className="size-4" />
@@ -951,7 +968,7 @@ export default function DatasetUploader() {
                             title="Copy link"
                           >
                             {copied === entry.id ? (
-                              <CheckIcon className="size-4" />
+                              <CheckIcon className="size-4 text-green-500" />
                             ) : (
                               <CopyIcon className="size-4" />
                             )}
@@ -1036,18 +1053,8 @@ export default function DatasetUploader() {
                           size="icon"
                           variant="ghost"
                           className="size-8"
-                          aria-label={`Open ${name}`}
-                          onClick={() => url && window.open(url, "_blank", "noopener,noreferrer")}
-                          title="Open"
-                        >
-                          <ExternalLinkIcon className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-8"
                           aria-label={`Download ${name}`}
-                          onClick={() => downloadOne(entry)}
+                          onClick={(e) => { e.stopPropagation(); downloadOne(entry); }}
                           title="Download"
                         >
                           <DownloadIcon className="size-4" />

@@ -6,6 +6,17 @@ import { ParserEngine } from '@aster/parser';
 const app = express();
 const port = process.env.PORT || 4000;
 
+// Native CORS (YAGNI on the cors dependency)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use(express.json());
 
 // In-memory Multer for Upload Engine
@@ -31,10 +42,9 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     return res.status(400).json({ success: false, error: 'No file uploaded' });
   }
 
-  // Stream the buffer through our ParserEngine
-  const stream = Readable.from(req.file.buffer);
-  
-  const parseResult = await parserEngine.execute({ stream });
+  // Parse the buffer as a string natively
+  const csvString = req.file.buffer.toString('utf8');
+  const parseResult = await parserEngine.execute({ csvString });
 
   if (!parseResult.success) {
     return res.status(500).json({ success: false, error: 'Parsing failed' });
@@ -57,6 +67,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   });
 });
 
-app.listen(port, () => {
+app.listen(Number(port), '0.0.0.0', () => {
   console.log(`Aster server listening on port ${port}`);
 });

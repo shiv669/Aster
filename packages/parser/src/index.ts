@@ -1,9 +1,8 @@
 import Papa from "papaparse";
 import { Engine, EngineResult } from "@aster/shared";
-import { Readable } from "stream";
 
 export interface ParserInput {
-  stream: Readable;
+  csvString: string;
 }
 
 export interface ParserOutput {
@@ -24,7 +23,7 @@ export class ParserEngine implements Engine<ParserInput, ParserOutput> {
       let headers: string[] = [];
       let delimiter = ",";
 
-      Papa.parse(input.stream, {
+      Papa.parse(input.csvString, {
         header: true,
         skipEmptyLines: "greedy",
         step: (results) => {
