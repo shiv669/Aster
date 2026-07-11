@@ -18,16 +18,16 @@ export const DataSource = {
 
 // --- Zod CRM Schema ---
 export const crmRecordSchema = z.object({
-  created_at: z.string().datetime().optional().nullable(),
+  created_at: z.string().optional().nullable(),
   name: z.string().optional().nullable(),
-  email: z.string().email().optional().nullable(),
+  email: z.string().optional().nullable(),
   country_code: z.string().optional().nullable(),
   mobile_without_country_code: z.string().optional().nullable(),
   company: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   state: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
-  lead_owner: z.string().email().optional().nullable(),
+  lead_owner: z.string().optional().nullable(),
   crm_status: z.nativeEnum(LeadStatus).optional().nullable(),
   crm_note: z.string().optional().nullable(),
   data_source: z.nativeEnum(DataSource).optional().nullable(),

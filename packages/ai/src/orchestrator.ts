@@ -25,9 +25,22 @@ export class BatchOrchestrator {
       const promptResult = await this.promptEngine.execute({ datasetChunk: chunk });
       if (!promptResult.success) continue;
 
-      const aiResult = await this.aiEngine.execute(promptResult.output);
+      let aiResult;
+      let retries = 0;
+      const MAX_RETRIES = 2;
+
+      while (retries <= MAX_RETRIES) {
+        aiResult = await this.aiEngine.execute(promptResult.output);
+        if (aiResult.success) break;
+        
+        retries++;
+        if (retries <= MAX_RETRIES) {
+          console.warn(`Milestone 6: AI Batch Failed. Retrying ${retries}/${MAX_RETRIES}...`);
+          await new Promise(r => setTimeout(r, 1500)); // wait before retry
+        }
+      }
       
-      if (aiResult.success && aiResult.output) {
+      if (aiResult && aiResult.success && aiResult.output) {
         // MILESTONE 4: Validation & Repair (Trusted Data)
         for (const rawRecord of aiResult.output) {
           const parsed = crmRecordSchema.safeParse(rawRecord);
