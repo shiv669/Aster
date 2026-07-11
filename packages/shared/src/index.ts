@@ -33,6 +33,12 @@ export const crmRecordSchema = z.object({
   data_source: z.nativeEnum(DataSource).optional().nullable(),
   possession_time: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
+}).refine(data => {
+  const hasEmail = data.email && data.email.trim() !== "";
+  const hasPhone = data.mobile_without_country_code && data.mobile_without_country_code.trim() !== "";
+  return hasEmail || hasPhone;
+}, {
+  message: "Record must contain at least an email or a mobile number",
 });
 
 export type CRMRecord = z.infer<typeof crmRecordSchema>;

@@ -188,15 +188,16 @@ export function UploadEngine() {
               <div>
                 <h3 className="text-xl font-semibold tracking-tight flex items-center gap-3">
                   AI Processed Results
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">
-                    {processResult.length} Extracted
+                  <span className="bg-emerald-500/10 text-emerald-500 text-xs px-2.5 py-1 rounded-md font-medium border border-emerald-500/20">
+                    {processResult.length} Imported
                   </span>
-                  {parsedData?.metadata?.rowCount && (parsedData.metadata.rowCount > processResult.length) && (
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/20">
-                      {parsedData.metadata.rowCount - processResult.length} Dropped
-                    </span>
-                  )}
+                  <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-md font-medium border border-amber-500/20">
+                    {parsedData?.length ? parsedData.length - processResult.length : 0} Skipped
+                  </span>
                 </h3>
+                <p className="text-sm text-muted-foreground mt-1.5">
+                  The Intelligence Engine successfully extracted {processResult.length} CRM records. {parsedData?.length ? parsedData.length - processResult.length : 0} invalid records were skipped.
+                </p>
               </div>
               
               <div className="flex items-center gap-2 mt-4 sm:mt-0">
