@@ -42,9 +42,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     return res.status(400).json({ success: false, error: 'No file uploaded' });
   }
 
-  // Parse the buffer as a string natively
-  const csvString = req.file.buffer.toString('utf8');
-  const parseResult = await parserEngine.execute({ csvString });
+  // Parse the buffer natively (ParserEngine handles encoding recovery)
+  const parseResult = await parserEngine.execute({ buffer: req.file.buffer });
 
   if (!parseResult.success) {
     return res.status(500).json({ success: false, error: 'Parsing failed' });

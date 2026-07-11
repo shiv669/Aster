@@ -10,16 +10,6 @@ export default function Home() {
           <UploadEngine />
         </div>
 
-        {/* The Premium Slide-to-Upload Footer */}
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
-          <div className="bg-background/80 backdrop-blur-xl shadow-2xl border border-border rounded-full p-2 pr-6 flex items-center gap-4">
-            <SlideButton />
-            <span className="text-sm font-medium text-muted-foreground pr-2">
-              Slide to confirm upload
-            </span>
-          </div>
-        </div>
-
       </div>
     </main>
   );

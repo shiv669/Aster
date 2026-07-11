@@ -66,27 +66,40 @@ const StatusIcon: React.FC<StatusIconProps> = ({ status }) => {
   )
 }
 
-const useButtonStatus = (resolveTo: "success" | "error") => {
+const useButtonStatus = (onSlide?: () => Promise<void>) => {
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle")
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     setStatus("loading")
-    setTimeout(() => {
-      setStatus(resolveTo)
-    }, 2000)
-  }, [resolveTo])
+    if (onSlide) {
+      try {
+        await onSlide()
+        setStatus("success")
+      } catch (err) {
+        setStatus("error")
+      }
+    } else {
+      setTimeout(() => {
+        setStatus("success")
+      }, 2000)
+    }
+  }, [onSlide])
 
   return { status, handleSubmit }
 }
 
-export const SlideButton = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, ...props }, ref) => {
+export interface SlideButtonProps extends ButtonProps {
+  onSlide?: () => Promise<void>
+}
+
+export const SlideButton = forwardRef<HTMLButtonElement, SlideButtonProps>(
+  ({ className, onSlide, ...props }, ref) => {
     const [isDragging, setIsDragging] = useState(false)
     const [completed, setCompleted] = useState(false)
     const dragHandleRef = useRef<HTMLDivElement | null>(null)
-    const { status, handleSubmit } = useButtonStatus("success")
+    const { status, handleSubmit } = useButtonStatus(onSlide)
 
     const dragX = useMotionValue(0)
     const springX = useSpring(dragX, ANIMATION_CONFIG.spring)

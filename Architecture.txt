@@ -1,0 +1,10895 @@
+# Aster
+
+**Aster** is an AI powered universal CSV ingestion engine that converts arbitrary spreadsheets into validated CRM records.
+
+The name is intentionally short, memorable, and product like. It does not reveal implementation details, allowing the engine to evolve into imports from Excel, Google Sheets, Notion exports, CRMs, APIs, and databases without renaming.
+
+---
+
+# Product Vision
+
+Most CSV importers assume the user already knows the schema.
+
+Aster assumes the opposite.
+
+Users upload anything.
+
+The system figures everything else out.
+
+The intelligence is not in reading CSVs.
+
+The intelligence is understanding messy business data.
+
+Every upload follows a deterministic pipeline where AI is used only where reasoning is required.
+
+Everything else is traditional software engineering.
+
+---
+
+# Core Philosophy
+
+The system should behave as though it were replacing an employee whose only job is importing CRM leads all day.
+
+It should never blindly trust AI.
+
+It should never blindly trust CSVs.
+
+Every stage should validate the previous stage.
+
+Every output should be explainable.
+
+Every failure should be recoverable.
+
+---
+
+# Engineering Principles
+
+## Simplicity over cleverness
+
+A solution that another engineer understands in two minutes is better than one requiring twenty minutes.
+
+---
+
+## AI is one component
+
+Never let the LLM become the application.
+
+The LLM is a reasoning engine.
+
+Everything around it is software engineering.
+
+---
+
+## Deterministic first
+
+If software can solve something without AI,
+
+software solves it.
+
+Examples
+
+Email validation
+
+Phone normalization
+
+Country codes
+
+Date parsing
+
+Enum correction
+
+Duplicate detection
+
+All deterministic.
+
+Never spend tokens on these.
+
+---
+
+## AI only resolves ambiguity
+
+Good examples
+
+Column meaning
+
+Unknown abbreviations
+
+Messy notes
+
+CRM status inference
+
+Lead source inference
+
+Bad examples
+
+Regex
+
+Splitting phone numbers
+
+Checking email format
+
+Formatting dates
+
+---
+
+# Minimal Engineering Rules
+
+Every feature begins with these questions.
+
+```
+Does this need to exist?
+
+↓
+
+No
+
+↓
+
+Delete it.
+```
+
+---
+
+```
+Already exists?
+
+↓
+
+Reuse it.
+```
+
+---
+
+```
+Node already solves it?
+
+↓
+
+Use Node.
+```
+
+---
+
+```
+Package already installed?
+
+↓
+
+Reuse package.
+```
+
+---
+
+```
+Native browser API?
+
+↓
+
+Use browser.
+```
+
+---
+
+```
+One line?
+
+↓
+
+Write one line.
+```
+
+---
+
+Only then
+
+Write the smallest possible implementation.
+
+---
+
+# Architecture Rule
+
+Every module answers exactly one question.
+
+Never more.
+
+Example
+
+Bad
+
+```
+CSVService
+
+uploads
+
+parses
+
+validates
+
+calls AI
+
+returns output
+```
+
+Impossible to maintain.
+
+Good
+
+```
+UploadService
+
+↓
+
+CSVParser
+
+↓
+
+SchemaDetector
+
+↓
+
+Preprocessor
+
+↓
+
+PromptBuilder
+
+↓
+
+LLMClient
+
+↓
+
+Validator
+
+↓
+
+Normalizer
+
+↓
+
+Exporter
+```
+
+Each module has one responsibility.
+
+---
+
+# Folder Structure
+
+```
+aster/
+
+    apps/
+
+        web/
+
+        server/
+
+    packages/
+
+        shared/
+
+        prompts/
+
+        validation/
+
+        parser/
+
+        ui/
+
+        logger/
+
+        types/
+
+    docs/
+
+    scripts/
+
+```
+
+Every folder becomes reusable.
+
+No duplicated code.
+
+---
+
+# Frontend Stack
+
+Next.js
+
+TypeScript
+
+App Router
+
+shadcn/ui
+
+TailwindCSS
+
+React Hook Form
+
+TanStack Table
+
+PapaParse
+
+Zod
+
+React Query
+
+Framer Motion
+
+Lucide Icons
+
+No Redux.
+
+No Context for server state.
+
+React Query handles data.
+
+---
+
+# Backend Stack
+
+Express
+
+TypeScript
+
+Multer
+
+PapaParse
+
+Zod
+
+Pino Logger
+
+Google Gemini Flash
+
+No database.
+
+Pure stateless architecture.
+
+Every request is self contained.
+
+---
+
+# Design Language
+
+The application should feel closer to
+
+Linear
+
+Stripe
+
+Vercel
+
+than
+
+Admin dashboard templates.
+
+Very little color.
+
+Whitespace.
+
+Clear typography.
+
+Excellent loading states.
+
+---
+
+# User Flow
+
+Landing
+
+↓
+
+Upload CSV
+
+↓
+
+Dataset Analysis
+
+↓
+
+Preview
+
+↓
+
+Schema Detection
+
+↓
+
+Confirm Import
+
+↓
+
+Live Processing
+
+↓
+
+Validation
+
+↓
+
+Result
+
+↓
+
+Export
+
+There is never confusion about what stage the system is currently executing.
+
+---
+
+# High Level Pipeline
+
+```
+CSV Upload
+
+↓
+
+Upload Engine
+
+↓
+
+CSV Streaming Parser
+
+↓
+
+Dataset Intelligence
+
+↓
+
+Schema Intelligence
+
+↓
+
+Data Normalization
+
+↓
+
+Prompt Builder
+
+↓
+
+Batch Scheduler
+
+↓
+
+Gemini
+
+↓
+
+Validation
+
+↓
+
+Normalization
+
+↓
+
+Confidence Engine
+
+↓
+
+Duplicate Detection
+
+↓
+
+Final CRM Output
+```
+
+Notice
+
+AI is one stage.
+
+Everything else is engineering.
+
+---
+
+# Coding Style
+
+Every file should be understandable in under five minutes.
+
+Every function under roughly thirty lines unless complexity genuinely requires more.
+
+Every function should have one job.
+
+Never nest deeply.
+
+Return early.
+
+Example
+
+Bad
+
+```ts
+if(user){
+
+   if(file){
+
+      if(valid){
+
+          ...
+
+      }
+
+   }
+
+}
+```
+
+Good
+
+```ts
+if (!user) return;
+
+if (!file) return;
+
+if (!valid) return;
+
+...
+```
+
+---
+
+# Naming
+
+Never abbreviate.
+
+Bad
+
+```
+procData()
+
+tmp()
+
+res2()
+
+csvFn()
+```
+
+Good
+
+```
+normalizePhone()
+
+detectSchema()
+
+validateEmail()
+
+repairStatus()
+```
+
+Reading code should feel like reading English.
+
+---
+
+# Comments
+
+Never explain what code is doing.
+
+Bad
+
+```ts
+// increment i
+
+i++;
+```
+
+Worthless.
+
+Good
+
+```ts
+// CRM exports frequently contain multiple phone numbers.
+// We intentionally keep the first and preserve the rest
+// inside crm_note to match GrowEasy's requirements.
+```
+
+Explain
+
+why
+
+never
+
+what.
+
+---
+
+# Logging
+
+Every major stage logs
+
+```
+stage
+
+duration
+
+records
+
+success
+
+failure
+
+memory
+
+tokens
+
+cost
+```
+
+Example
+
+```
+[Schema Detection]
+
+483 ms
+
+42 columns
+
+confidence 96%
+
+language English
+```
+
+Logs should help debugging without opening a debugger.
+
+---
+
+# Error Philosophy
+
+Never crash.
+
+Recover.
+
+Bad record
+
+↓
+
+Skip
+
+Bad batch
+
+↓
+
+Retry
+
+Bad AI output
+
+↓
+
+Repair
+
+Impossible output
+
+↓
+
+Flag
+
+Never stop importing thousands of good rows because one row failed.
+
+---
+
+# UI Philosophy
+
+The interface should communicate confidence.
+
+Not merely completion.
+
+Instead of
+
+```
+Imported
+```
+
+Show
+
+```
+Imported
+
+842 records
+
+5 skipped
+
+3 repaired
+
+Confidence
+
+98.2%
+```
+
+The user should leave trusting the system rather than wondering what happened.
+
+
+# System Architecture
+
+The application is divided into independent engines.
+
+Every engine accepts one input.
+
+Every engine produces one output.
+
+No engine knows how another engine works internally.
+
+```text
+Browser
+
+↓
+
+Upload Engine
+
+↓
+
+Dataset Intelligence Engine
+
+↓
+
+Schema Intelligence Engine
+
+↓
+
+Data Preparation Engine
+
+↓
+
+Batch Orchestrator
+
+↓
+
+Prompt Engine
+
+↓
+
+LLM Engine
+
+↓
+
+Validation Engine
+
+↓
+
+Repair Engine
+
+↓
+
+Confidence Engine
+
+↓
+
+Export Engine
+```
+
+This means replacing Gemini with Claude should only require changing one file.
+
+Replacing CSV with Excel should only require changing one engine.
+
+Replacing REST with WebSockets should require no business logic changes.
+
+---
+
+# Repository
+
+```
+apps/
+
+    web/
+
+        app/
+
+        components/
+
+        hooks/
+
+        services/
+
+        lib/
+
+        styles/
+
+    server/
+
+        src/
+
+            modules/
+
+            middleware/
+
+            routes/
+
+            services/
+
+            utils/
+
+            types/
+
+packages/
+
+    parser/
+
+    prompts/
+
+    validation/
+
+    shared/
+
+    ui/
+
+    logger/
+
+    ai/
+
+docs/
+
+tests/
+
+scripts/
+
+```
+
+No folder should become larger than roughly twenty files.
+
+If it does
+
+Split it.
+
+---
+
+# Upload Engine
+
+Responsibility
+
+Accept user files.
+
+Nothing else.
+
+Responsibilities
+
+Validate extension
+
+Validate MIME
+
+Validate size
+
+Calculate checksum
+
+Detect delimiter
+
+Detect encoding
+
+Estimate rows
+
+Estimate columns
+
+Estimate memory usage
+
+Return
+
+```ts
+interface UploadedDataset {
+
+    id
+
+    name
+
+    encoding
+
+    delimiter
+
+    rowCount
+
+    columnCount
+
+    checksum
+
+}
+```
+
+Nothing AI related belongs here.
+
+---
+
+# CSV Streaming Engine
+
+Never
+
+```ts
+readFile()
+
+split("\n")
+```
+
+Always stream.
+
+Benefits
+
+Memory stays constant.
+
+Supports huge files.
+
+Supports future multi GB datasets.
+
+Every parsed row immediately flows downstream.
+
+No unnecessary waiting.
+
+---
+
+# Dataset Intelligence Engine
+
+Before touching AI
+
+Understand the dataset.
+
+Output
+
+```
+Rows
+
+Columns
+
+Empty rows
+
+Duplicate headers
+
+Languages
+
+Possible CRM export
+
+Possible Excel export
+
+Encoding
+
+Delimiter
+
+Date formats
+
+Country formats
+
+Average row length
+
+Average tokens
+
+Maximum row size
+```
+
+This engine builds a complete profile.
+
+The rest of the pipeline uses this profile.
+
+---
+
+# Schema Intelligence Engine
+
+Probably the most important engine.
+
+Input
+
+```
+fname
+
+lname
+
+mob
+
+mail
+
+zip
+
+cust id
+
+remarks
+```
+
+Output
+
+```
+first_name
+
+last_name
+
+phone
+
+email
+
+postal_code
+
+customer_id
+
+notes
+```
+
+How
+
+Layer 1
+
+Dictionary lookup
+
+```
+fname
+
+↓
+
+first_name
+```
+
+Layer 2
+
+Regex
+
+```
+mobile_1
+
+↓
+
+phone
+```
+
+Layer 3
+
+Similarity
+
+```
+telephone
+
+↓
+
+phone
+```
+
+Layer 4
+
+LLM
+
+Only if confidence drops below threshold.
+
+Never ask AI obvious questions.
+
+---
+
+# Canonical Schema
+
+Every record becomes
+
+```ts
+interface CanonicalRecord {
+
+    originalField
+
+    canonicalField
+
+    value
+
+    confidence
+
+    metadata
+
+}
+```
+
+Every future engine consumes this format.
+
+Never raw CSV again.
+
+---
+
+# Data Preparation Engine
+
+This engine makes the LLM's life easy.
+
+Normalize
+
+Whitespace
+
+Unicode
+
+Line endings
+
+Country codes
+
+Phone numbers
+
+Emails
+
+Dates
+
+Currency
+
+Booleans
+
+Example
+
+```
+YES
+
+↓
+
+true
+```
+
+```
+9876543210
+
+↓
+
++919876543210
+```
+
+```
+  John
+
+↓
+
+John
+```
+
+Thousands of tiny fixes happen here.
+
+No AI.
+
+---
+
+# Batch Orchestrator
+
+This is not batching.
+
+This is intelligent batching.
+
+Inputs
+
+```
+Row count
+
+Average token length
+
+Average prompt size
+
+Model token limit
+
+Estimated response size
+```
+
+Output
+
+```
+Batch 1
+
+37 rows
+
+Batch 2
+
+42 rows
+
+Batch 3
+
+19 rows
+```
+
+Every upload generates different batches.
+
+---
+
+# Prompt Engine
+
+Prompts are never hardcoded inside controllers.
+
+Bad
+
+```ts
+const prompt = "...";
+```
+
+Good
+
+```
+PromptBuilder
+
+↓
+
+System Prompt
+
+↓
+
+Business Rules
+
+↓
+
+Detected Schema
+
+↓
+
+Allowed Values
+
+↓
+
+Current Batch
+
+↓
+
+Output Contract
+
+↓
+
+Final Prompt
+```
+
+Prompt construction becomes modular.
+
+---
+
+# Prompt Versioning
+
+Every prompt gets
+
+```
+v1
+
+v2
+
+v3
+```
+
+Responses include
+
+```
+Prompt Version
+
+Model
+
+Temperature
+
+Latency
+
+Token Count
+```
+
+Now experiments become measurable.
+
+---
+
+# AI Engine
+
+One responsibility.
+
+Talk to Gemini.
+
+Nothing else.
+
+Input
+
+Prompt
+
+Output
+
+Raw structured JSON
+
+No repairing.
+
+No parsing.
+
+No validation.
+
+No retries.
+
+---
+
+# Validation Engine
+
+This is software.
+
+Not AI.
+
+Everything passes through Zod.
+
+Examples
+
+Email regex
+
+Phone parser
+
+Allowed enums
+
+Country
+
+Dates
+
+Company names
+
+Anything invalid becomes
+
+```
+Rejected
+
+↓
+
+Repair Queue
+```
+
+---
+
+# Repair Engine
+
+Never immediately call AI again.
+
+Attempt deterministic repair.
+
+Example
+
+```
+Good lead
+
+↓
+
+GOOD_LEAD
+```
+
+```
+WarmLead
+
+↓
+
+WARM_LEAD
+```
+
+```
+IND
+
+↓
+
+India
+```
+
+If repair succeeds
+
+Continue.
+
+If not
+
+AI Retry.
+
+If AI Retry fails
+
+Human Review.
+
+---
+
+# Retry Strategy
+
+Never retry everything.
+
+Retry only failed batches.
+
+```
+Batch 8
+
+↓
+
+Timeout
+
+↓
+
+Retry
+
+↓
+
+Success
+```
+
+Other batches continue.
+
+No user waits because one batch failed.
+
+---
+
+# Confidence Engine
+
+Every field receives confidence.
+
+Sources
+
+Schema confidence
+
+LLM confidence
+
+Validation confidence
+
+Repair confidence
+
+Overall confidence
+
+Example
+
+```
+Email
+
+99%
+
+Phone
+
+100%
+
+Status
+
+87%
+
+Company
+
+76%
+```
+
+Frontend colors every field.
+
+Green
+
+Yellow
+
+Red
+
+No black box AI.
+
+---
+
+# Duplicate Engine
+
+Uses
+
+Email
+
+Phone
+
+Name
+
+Company
+
+Hash
+
+Similarity
+
+Produces
+
+```
+Possible Duplicate
+
+92%
+
+Merged
+
+Ignored
+
+Manual Review
+```
+
+Future database integration becomes trivial.
+
+---
+
+# Output Engine
+
+Produces
+
+Clean JSON
+
+Clean CSV
+
+Statistics
+
+Import Summary
+
+Validation Report
+
+Confidence Report
+
+Repair Report
+
+Skipped Records
+
+The user never downloads only data.
+
+They download trust.
+
+
+# API Design
+
+The API should feel predictable.
+
+Every endpoint returns
+
+```ts
+{
+    success,
+    data,
+    error,
+    metadata
+}
+```
+
+Never
+
+```ts
+{
+    result
+}
+```
+
+Never
+
+```ts
+{
+    response
+}
+```
+
+Never different response formats.
+
+---
+
+# REST Endpoints
+
+## Upload
+
+```http
+POST /api/upload
+```
+
+Returns
+
+```ts
+datasetId
+
+rowCount
+
+columnCount
+
+preview
+
+datasetProfile
+```
+
+---
+
+## Analyze
+
+```http
+POST /api/analyze/:datasetId
+```
+
+Runs
+
+Dataset Intelligence
+
+Schema Intelligence
+
+Returns
+
+```ts
+schema
+
+confidence
+
+warnings
+
+statistics
+```
+
+---
+
+## Import
+
+```http
+POST /api/import/:datasetId
+```
+
+Runs
+
+Entire AI pipeline.
+
+Returns Job ID.
+
+Never block request.
+
+---
+
+## Job Status
+
+```http
+GET /api/jobs/:id
+```
+
+Returns
+
+```ts
+Current Stage
+
+Progress
+
+Current Batch
+
+Total Batches
+
+ETA
+
+Errors
+
+Warnings
+```
+
+Frontend polls every second.
+
+Future
+
+Replace with SSE.
+
+No API changes.
+
+---
+
+## Download JSON
+
+```http
+GET /api/export/json/:id
+```
+
+---
+
+## Download CSV
+
+```http
+GET /api/export/csv/:id
+```
+
+---
+
+## Health
+
+```http
+GET /health
+```
+
+Returns
+
+```json
+{
+
+status:"healthy",
+
+gemini:true,
+
+memory:"73 MB",
+
+uptime:...
+
+}
+```
+
+---
+
+# Request Lifecycle
+
+```text
+Upload
+
+↓
+
+Validate
+
+↓
+
+Dataset Analysis
+
+↓
+
+Preview
+
+↓
+
+Confirm
+
+↓
+
+Import
+
+↓
+
+Scheduler
+
+↓
+
+Gemini
+
+↓
+
+Validation
+
+↓
+
+Repair
+
+↓
+
+Output
+
+↓
+
+Download
+```
+
+Every stage visible.
+
+Nothing hidden.
+
+---
+
+# Frontend Pages
+
+```
+/
+
+Landing
+
+/upload
+
+Import
+
+/results
+
+Import Result
+
+/docs
+
+Developer Docs
+```
+
+Only four pages.
+
+Simple.
+
+---
+
+# Landing
+
+Very clean.
+
+One screen.
+
+```
++------------------------------------------------+
+
+ASTER
+
+AI Powered CRM Import Engine
+
+Upload any CSV.
+
+We'll understand it.
+
+[ Upload CSV ]
+
+Supports
+
+Facebook
+
+Google
+
+Excel
+
+CRM
+
+Sales
+
+Marketing
+
++------------------------------------------------+
+```
+
+Nothing else.
+
+No marketing paragraphs.
+
+---
+
+# Upload Page
+
+Sections
+
+```
+Upload
+
+↓
+
+Dataset Summary
+
+↓
+
+CSV Preview
+
+↓
+
+Detected Schema
+
+↓
+
+Confirm Import
+```
+
+Linear.
+
+Top to bottom.
+
+---
+
+# Upload Component
+
+Supports
+
+Drag Drop
+
+Paste
+
+Browse
+
+Replace
+
+Remove
+
+Recent Upload
+
+Shows
+
+```
+Filename
+
+Rows
+
+Columns
+
+Encoding
+
+Delimiter
+
+Estimated Cost
+
+Estimated Time
+```
+
+Immediately.
+
+---
+
+# Dataset Summary Card
+
+```
+Dataset
+
+Sales_June.csv
+
+Rows
+
+24,832
+
+Columns
+
+19
+
+Language
+
+English
+
+Encoding
+
+UTF8
+
+Delimiter
+
+Comma
+
+Possible CRM
+
+98%
+```
+
+Looks intelligent.
+
+---
+
+# Preview Table
+
+Must support
+
+Horizontal Scroll
+
+Vertical Scroll
+
+Sticky Header
+
+Column Resize
+
+Search
+
+Row Numbers
+
+Pagination
+
+Virtualization
+
+Keyboard Navigation
+
+Column Hover
+
+Copy Cell
+
+Responsive
+
+Exactly like professional BI software.
+
+---
+
+# Import Button
+
+Never
+
+```
+Import
+```
+
+Instead
+
+```
+Analyze & Import
+```
+
+The button explains the action.
+
+---
+
+# Progress Screen
+
+Most submissions
+
+```
+Loading...
+```
+
+Rejected.
+
+Instead
+
+```
+Uploading
+
+██████
+
+Analyzing Dataset
+
+██████████
+
+Understanding Schema
+
+██████████████
+
+Preparing AI
+
+█████████████████
+
+Running AI
+
+██████████████████████
+
+Validating
+
+██████████████████████████
+
+Repairing
+
+████████████████████████████
+
+Done
+```
+
+Feels alive.
+
+---
+
+# Live Logs
+
+Right panel
+
+```
+12:31
+
+Upload Complete
+
+12:31
+
+Delimiter detected
+
+12:31
+
+UTF8 detected
+
+12:31
+
+Schema confidence
+
+96%
+
+12:31
+
+Batch 4/18 started
+
+12:32
+
+Repairing invalid dates
+
+12:32
+
+Done
+```
+
+This builds trust.
+
+---
+
+# Results Page
+
+Sections
+
+```
+Summary
+
+↓
+
+Imported
+
+↓
+
+Skipped
+
+↓
+
+Warnings
+
+↓
+
+AI Statistics
+
+↓
+
+Export
+```
+
+---
+
+# Import Summary
+
+Cards
+
+```
+Imported
+
+842
+
+Skipped
+
+6
+
+Duplicates
+
+3
+
+Repaired
+
+19
+
+Processing Time
+
+18 s
+
+Confidence
+
+97%
+```
+
+Immediately understandable.
+
+---
+
+# Imported Records
+
+Table.
+
+Every field
+
+Color coded.
+
+Green
+
+High confidence.
+
+Yellow
+
+Medium.
+
+Red
+
+Needs review.
+
+Hover
+
+Shows
+
+```
+Mapped from
+
+customer_mobile
+
+↓
+
+mobile
+
+Confidence
+
+93%
+
+Reason
+
+Regex + AI Agreement
+```
+
+Now AI becomes explainable.
+
+---
+
+# Skipped Records
+
+Don't hide.
+
+Explain.
+
+```
+Skipped
+
+Reason
+
+No Email
+
+No Phone
+
+Invalid Row
+
+Unreadable Encoding
+```
+
+Everything transparent.
+
+---
+
+# Warning Panel
+
+Examples
+
+```
+12 rows
+
+Country inferred
+
+3 rows
+
+Status repaired
+
+8 rows
+
+Phone normalized
+
+2 rows
+
+Duplicate email
+```
+
+Looks enterprise.
+
+---
+
+# AI Metrics
+
+Beautiful card.
+
+```
+Gemini Flash
+
+Prompt Version
+
+v3
+
+Total Tokens
+
+18,923
+
+Prompt
+
+11,932
+
+Output
+
+6,991
+
+Cost
+
+$0.011
+
+Latency
+
+14.2 s
+
+Batches
+
+17
+```
+
+Hiring managers love seeing engineering awareness.
+
+---
+
+# Export Options
+
+```
+Download JSON
+
+Download CSV
+
+Download Import Report
+
+Copy API Response
+```
+
+One click.
+
+---
+
+# Import Report
+
+Generate PDF.
+
+Contains
+
+Dataset
+
+Statistics
+
+Errors
+
+Warnings
+
+Confidence
+
+Skipped
+
+Imported
+
+Repair Summary
+
+Token Usage
+
+Timestamp
+
+Checksum
+
+Looks professional.
+
+---
+
+# UI Components
+
+Everything reusable.
+
+```
+Button
+
+Card
+
+MetricCard
+
+UploadArea
+
+ProgressBar
+
+LogViewer
+
+StatusBadge
+
+ConfidenceBadge
+
+DataTable
+
+WarningCard
+
+ErrorBanner
+
+EmptyState
+
+SectionHeader
+
+LoadingSkeleton
+
+Toast
+
+Dialog
+
+Tooltip
+
+Drawer
+
+Accordion
+```
+
+Nothing duplicated.
+
+---
+
+# Design Tokens
+
+Radius
+
+12px
+
+Spacing
+
+8 point grid
+
+Typography
+
+Inter
+
+Primary
+
+Slate
+
+Accent
+
+Blue
+
+Success
+
+Emerald
+
+Warning
+
+Amber
+
+Error
+
+Red
+
+No gradients.
+
+No glassmorphism.
+
+Looks like Stripe.
+
+---
+
+# Animations
+
+Fast.
+
+Never decorative.
+
+Upload
+
+Scale.
+
+Cards
+
+Fade.
+
+Progress
+
+Smooth.
+
+Numbers
+
+Count Up.
+
+Skeletons
+
+Instead of spinners.
+
+Everything under 200 ms.
+
+Feels responsive.
+
+---
+
+# Empty States
+
+Instead of
+
+```
+No Data
+```
+
+Show
+
+```
+Upload a CSV to begin.
+
+Supported
+
+Facebook
+
+Google Ads
+
+Excel
+
+CRM exports
+```
+
+Always guide the user.
+
+---
+
+# Error Handling
+
+Every error teaches.
+
+Never
+
+```
+Something went wrong.
+```
+
+Instead
+
+```
+CSV encoding not recognized.
+
+Try saving the file as UTF8.
+
+Supported
+
+UTF8
+
+UTF16
+
+ASCII
+```
+
+Actionable.
+
+---
+
+# Accessibility
+
+Keyboard only.
+
+Screen readers.
+
+Focus rings.
+
+ARIA labels.
+
+High contrast.
+
+Every action accessible.
+
+Enterprise software is inclusive by default.
+
+---
+
+# Performance Budget
+
+Initial load
+
+Under 2 seconds.
+
+CSV preview
+
+Instant.
+
+Schema detection
+
+Under 500 ms before AI.
+
+Progress updates
+
+Every second.
+
+Large files
+
+Remain interactive through virtualization.
+
+No blocking on the main thread.
+
+The application should feel fast even when the AI takes time because the interface continuously communicates progress and state.
+
+
+# Production Quality Standards
+
+The system should be written as though another engineer will inherit it tomorrow.
+
+If an engineer cannot understand a module in five minutes, the module is too complicated.
+
+If an AI coding assistant cannot safely modify a file without reading ten others, the architecture is wrong.
+
+Every file should have one responsibility.
+
+Every function should solve one problem.
+
+Every module should expose one public interface.
+
+---
+
+# Code Style Guide
+
+## Rule 1
+
+Write code that is obvious.
+
+Not clever.
+
+Bad
+
+```ts
+const r=a?.b?.c?.map(x=>f(x)).filter(Boolean)
+```
+
+Good
+
+```ts
+const users = response.users;
+
+const activeUsers = users
+    .map(transformUser)
+    .filter(Boolean);
+```
+
+Future maintainers matter more than saving three lines.
+
+---
+
+## Rule 2
+
+Prefer composition.
+
+Never inheritance.
+
+Bad
+
+```text
+AIImporter
+
+↓
+
+CRMImporter
+
+↓
+
+GoogleImporter
+
+↓
+
+FacebookImporter
+```
+
+Good
+
+```text
+Importer
+
+↓
+
+Parser
+
+↓
+
+Validator
+
+↓
+
+Normalizer
+
+↓
+
+Exporter
+```
+
+Small reusable building blocks.
+
+---
+
+## Rule 3
+
+Every function should answer one question.
+
+Bad
+
+```text
+importCSV()
+
+Uploads
+
+Parses
+
+Repairs
+
+Calls AI
+
+Downloads JSON
+```
+
+Good
+
+```text
+upload()
+
+↓
+
+parse()
+
+↓
+
+detectSchema()
+
+↓
+
+normalize()
+
+↓
+
+runAI()
+
+↓
+
+validate()
+
+↓
+
+export()
+```
+
+---
+
+## Rule 4
+
+Pure functions wherever possible.
+
+Good
+
+```ts
+normalizePhone(phone)
+```
+
+Bad
+
+```ts
+normalizePhone(phone, database, logger, cache)
+```
+
+Pure functions are easier to test.
+
+---
+
+# Dependency Philosophy
+
+Before installing anything ask
+
+```text
+Does JavaScript already solve it?
+
+↓
+
+Yes
+
+↓
+
+Use JavaScript.
+```
+
+---
+
+```text
+Does Next.js solve it?
+
+↓
+
+Yes
+
+↓
+
+Use Next.js.
+```
+
+---
+
+```text
+Does Node solve it?
+
+↓
+
+Yes
+
+↓
+
+Use Node.
+```
+
+---
+
+```text
+Already installed?
+
+↓
+
+Reuse it.
+```
+
+---
+
+Only install dependencies when absolutely necessary.
+
+Every dependency becomes future maintenance.
+
+---
+
+# Shared Types
+
+Never duplicate interfaces.
+
+Everything shared lives here.
+
+```text
+packages/shared/
+
+Dataset.ts
+
+ImportJob.ts
+
+CRMRecord.ts
+
+Confidence.ts
+
+Statistics.ts
+
+Validation.ts
+```
+
+Every application imports from here.
+
+---
+
+# Configuration
+
+Never hardcode.
+
+```text
+config/
+
+ai.ts
+
+limits.ts
+
+prompts.ts
+
+validation.ts
+
+routes.ts
+```
+
+Every configurable value belongs here.
+
+---
+
+# Environment Variables
+
+Only
+
+```text
+GEMINI_API_KEY
+
+PORT
+
+MAX_UPLOAD_SIZE
+
+MAX_BATCH_SIZE
+
+NODE_ENV
+```
+
+Nothing else.
+
+Simple.
+
+---
+
+# AI Prompt Directory
+
+```text
+prompts/
+
+schema.ts
+
+mapping.ts
+
+crm.ts
+
+repair.ts
+
+system.ts
+```
+
+Each prompt has one purpose.
+
+---
+
+# Prompt Engineering
+
+Every prompt has
+
+System Prompt
+
+↓
+
+Business Rules
+
+↓
+
+Schema Context
+
+↓
+
+Dataset Context
+
+↓
+
+Current Batch
+
+↓
+
+Expected JSON
+
+↓
+
+Validation Rules
+
+↓
+
+Examples
+
+Never concatenate random strings.
+
+Always build prompts structurally.
+
+---
+
+# Prompt Contract
+
+Every AI request includes
+
+```text
+Allowed Fields
+
+Allowed Enums
+
+Output Schema
+
+Validation Rules
+
+Confidence Requirement
+
+JSON Only
+
+No Markdown
+```
+
+Never trust the model.
+
+---
+
+# AI Output Contract
+
+Never
+
+```text
+Return text.
+```
+
+Always
+
+```json
+{
+
+records:[],
+
+confidence:...,
+
+warnings:[],
+
+reasoning:[]
+}
+```
+
+Strict contracts reduce hallucinations.
+
+---
+
+# Hallucination Prevention
+
+Never ask
+
+```text
+Figure out everything.
+```
+
+Instead ask
+
+```text
+These are the detected columns.
+
+These are possible mappings.
+
+Choose only among these unless confidence is below 70%.
+```
+
+Constrain the search space.
+
+Models become dramatically more reliable.
+
+---
+
+# Token Optimization
+
+Most submissions waste tokens.
+
+Instead
+
+Detect schema once.
+
+Reuse for every batch.
+
+Never resend
+
+Business Rules
+
+Examples
+
+Allowed Values
+
+System Instructions
+
+for every request.
+
+Cache static prompt sections.
+
+Only append
+
+Current Batch.
+
+Huge token savings.
+
+---
+
+# Intelligent Context Compression
+
+Instead of sending
+
+100 rows
+
+Send
+
+Representative samples.
+
+Common values.
+
+Column summaries.
+
+Unique categories.
+
+Average lengths.
+
+The model understands the dataset before individual records.
+
+---
+
+# Multi Stage Reasoning
+
+Instead of one huge prompt
+
+Break reasoning.
+
+Stage One
+
+Schema.
+
+↓
+
+Stage Two
+
+Field Mapping.
+
+↓
+
+Stage Three
+
+CRM Enrichment.
+
+↓
+
+Stage Four
+
+Validation.
+
+Small focused prompts outperform giant prompts.
+
+---
+
+# Processing Strategy
+
+The pipeline never waits unnecessarily.
+
+```text
+Upload
+
+↓
+
+Preview immediately
+
+↓
+
+Analyze immediately
+
+↓
+
+User reads preview
+
+↓
+
+Background schema detection
+
+↓
+
+User confirms
+
+↓
+
+AI starts instantly
+```
+
+User perceives zero waiting.
+
+---
+
+# Progressive Enhancement
+
+Results appear gradually.
+
+Not all at once.
+
+Example
+
+```text
+Rows Imported
+
+421
+
+↓
+
+537
+
+↓
+
+698
+
+↓
+
+842
+```
+
+The application feels alive.
+
+---
+
+# Parallel Processing
+
+Independent work runs simultaneously.
+
+```text
+Schema Detection
+
+──────────────┐
+
+              │
+
+Delimiter Detection
+
+──────────────┤
+
+              │
+
+Encoding Detection
+
+──────────────┤
+
+              │
+
+Statistics
+
+──────────────┘
+```
+
+Only synchronize when necessary.
+
+---
+
+# Memory Strategy
+
+Never keep entire datasets in memory.
+
+Pipeline
+
+```text
+Read
+
+↓
+
+Transform
+
+↓
+
+Validate
+
+↓
+
+Emit
+
+↓
+
+Discard
+```
+
+Streaming everywhere.
+
+---
+
+# Validation Layers
+
+Every record passes through four layers.
+
+```text
+Structural
+
+↓
+
+Business
+
+↓
+
+AI
+
+↓
+
+Final
+```
+
+Structural
+
+JSON shape.
+
+Business
+
+CRM rules.
+
+AI
+
+Reasoning quality.
+
+Final
+
+Export safe.
+
+---
+
+# Business Rule Engine
+
+Separate from AI.
+
+Example
+
+```text
+No Email
+
++
+
+No Phone
+
+↓
+
+Reject
+```
+
+```text
+Country Missing
+
+↓
+
+Infer from Phone
+```
+
+```text
+Status Missing
+
+↓
+
+Default NEW_LEAD
+```
+
+Software should enforce business logic.
+
+Not prompts.
+
+---
+
+# Explainability
+
+Every AI decision should be inspectable.
+
+Hover
+
+```text
+Lead Status
+
+Qualified
+
+Confidence
+
+92%
+
+Reason
+
+Company Size
+
++
+
+Positive Intent
+
++
+
+Budget Mentioned
+```
+
+Users trust explanations.
+
+---
+
+# Trust Score
+
+Every import gets one overall score.
+
+Formula combines
+
+Schema confidence.
+
+Validation success.
+
+Repair count.
+
+Duplicate rate.
+
+LLM confidence.
+
+Output
+
+```text
+Dataset Trust
+
+97%
+
+Excellent
+```
+
+Not just "Import Successful."
+
+---
+
+# Enterprise Features
+
+Every professional importer eventually needs
+
+Import history.
+
+Undo.
+
+Audit trail.
+
+Role permissions.
+
+Approval workflow.
+
+Versioning.
+
+Databases are intentionally excluded for this assignment, so these are designed behind interfaces without implementation. Future storage can be added without changing business logic.
+
+---
+
+# Observability
+
+Every stage exposes metrics.
+
+```text
+Rows Processed
+
+Rows Per Second
+
+Average Batch Time
+
+Token Usage
+
+Repair Count
+
+Retry Count
+
+Validation Failures
+
+Memory Usage
+
+CPU Time
+```
+
+Nothing is hidden.
+
+If performance drops, you immediately know where.
+
+---
+
+# Failure Philosophy
+
+Failures are isolated.
+
+One bad record never stops a batch.
+
+One bad batch never stops an import.
+
+One failed AI request never loses progress.
+
+The user should always receive the maximum amount of successfully processed data, accompanied by a transparent report explaining what succeeded, what failed, what was repaired automatically, and what still requires manual attention.
+
+
+# Security Model
+
+Security is not a feature.
+
+Security is the default state.
+
+Every input is considered malicious until proven otherwise.
+
+---
+
+# Upload Security
+
+Immediately reject
+
+Executable files
+
+Hidden extensions
+
+Corrupted MIME types
+
+Oversized uploads
+
+Malformed CSV structures
+
+Unexpected encodings
+
+Example
+
+```text
+invoice.csv.exe
+
+↓
+
+Rejected
+```
+
+---
+
+Every upload receives
+
+```text
+Checksum
+
+↓
+
+Validation
+
+↓
+
+Processing
+```
+
+This prevents accidental duplicate imports.
+
+---
+
+# Input Sanitization
+
+Every string passes through
+
+Unicode normalization
+
+Whitespace cleanup
+
+Control character removal
+
+Invisible Unicode removal
+
+Null byte removal
+
+Dangerous HTML escaping
+
+Spreadsheet formula detection
+
+Example
+
+```text
+=cmd|' /C calc'!A0
+
+↓
+
+Escaped
+```
+
+CSV injection protection is mandatory.
+
+---
+
+# API Protection
+
+Every endpoint has
+
+Rate limiting
+
+Payload limits
+
+Timeouts
+
+Request validation
+
+Structured errors
+
+No endpoint trusts client data.
+
+---
+
+# Error Responses
+
+Never expose
+
+Stack traces
+
+Internal paths
+
+Environment variables
+
+Model prompts
+
+Raw exceptions
+
+Instead
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_CSV",
+    "message": "The uploaded CSV could not be parsed."
+  }
+}
+```
+
+---
+
+# Performance Strategy
+
+Performance begins before writing code.
+
+Avoid work.
+
+Then optimize.
+
+---
+
+## Pipeline Performance
+
+Never
+
+```text
+Upload
+
+↓
+
+Wait
+
+↓
+
+Analyze
+
+↓
+
+Wait
+
+↓
+
+Preview
+
+↓
+
+Wait
+
+↓
+
+AI
+```
+
+Instead
+
+```text
+Upload
+
+──────────────┐
+
+              │
+
+Preview        │
+
+──────────────┤
+
+              │
+
+Schema         │
+
+──────────────┤
+
+              │
+
+Statistics     │
+
+──────────────┘
+```
+
+Everything independent runs simultaneously.
+
+---
+
+# Browser Performance
+
+Never render
+
+100,000 rows.
+
+Render
+
+40.
+
+Virtualize the rest.
+
+TanStack Virtual.
+
+---
+
+# CSV Preview
+
+Preview only
+
+First 100 rows.
+
+Background parser continues reading.
+
+The user starts interacting immediately.
+
+---
+
+# AI Performance
+
+Estimate token count before sending.
+
+If estimated context exceeds threshold
+
+Automatically reduce batch size.
+
+Never let requests fail because of predictable limits.
+
+---
+
+# Smart Batching
+
+Instead of
+
+```text
+50 rows
+```
+
+Compute
+
+```text
+Estimated Tokens
+
+↓
+
+Target Context Size
+
+↓
+
+Adaptive Batch Size
+```
+
+Each dataset gets different batch sizes.
+
+---
+
+# Token Budget
+
+Display
+
+```text
+Prompt
+
+Input
+
+Output
+
+Total
+
+Estimated Cost
+```
+
+Transparency builds trust.
+
+---
+
+# Retry Policy
+
+Network error
+
+↓
+
+Retry immediately.
+
+429
+
+↓
+
+Exponential backoff.
+
+Invalid JSON
+
+↓
+
+Repair.
+
+Invalid Schema
+
+↓
+
+Re-prompt.
+
+Permanent error
+
+↓
+
+Manual review.
+
+Every failure has a strategy.
+
+---
+
+# Testing Philosophy
+
+Testing follows the pipeline.
+
+---
+
+## Unit Tests
+
+Every pure function.
+
+```text
+normalizePhone()
+
+detectDelimiter()
+
+estimateTokens()
+
+validateEmail()
+```
+
+---
+
+## Integration Tests
+
+Whole modules.
+
+```text
+CSV
+
+↓
+
+Parser
+
+↓
+
+Schema
+
+↓
+
+Validation
+```
+
+---
+
+## End to End Tests
+
+User uploads CSV.
+
+Receives final JSON.
+
+Nothing mocked except Gemini.
+
+---
+
+# Test Datasets
+
+Create
+
+Perfect dataset
+
+Messy dataset
+
+Large dataset
+
+Duplicate dataset
+
+Wrong encoding
+
+Missing columns
+
+Random headers
+
+International data
+
+Corrupted CSV
+
+Emoji dataset
+
+Mixed languages
+
+Huge descriptions
+
+Everything should still work.
+
+---
+
+# Documentation
+
+README should feel like product documentation.
+
+---
+
+Sections
+
+```text
+Introduction
+
+Architecture
+
+Features
+
+Pipeline
+
+Folder Structure
+
+Setup
+
+Environment Variables
+
+Running
+
+Testing
+
+Deployment
+
+API
+
+Screenshots
+
+Engineering Decisions
+
+Future Roadmap
+```
+
+Not just installation instructions.
+
+---
+
+# Engineering Decisions
+
+Document
+
+Why streaming
+
+Why Zod
+
+Why React Query
+
+Why adaptive batching
+
+Why Gemini
+
+Why deterministic validation
+
+Reviewers appreciate justified decisions.
+
+---
+
+# Screenshots
+
+Include
+
+Landing page
+
+Upload
+
+Schema detection
+
+Progress
+
+Results
+
+Confidence view
+
+Export
+
+Architecture diagram
+
+One image per major feature.
+
+---
+
+# Architecture Diagram
+
+The first image in the README should be
+
+```text
+                Upload
+
+                   │
+
+                   ▼
+
+       Dataset Intelligence
+
+                   │
+
+                   ▼
+
+       Schema Intelligence
+
+                   │
+
+                   ▼
+
+      Data Preparation Engine
+
+                   │
+
+                   ▼
+
+        Adaptive Batch Engine
+
+                   │
+
+                   ▼
+
+              Gemini
+
+                   │
+
+                   ▼
+
+       Validation Engine
+
+                   │
+
+                   ▼
+
+         Repair Engine
+
+                   │
+
+                   ▼
+
+      Confidence Engine
+
+                   │
+
+                   ▼
+
+            Export Engine
+```
+
+Someone should understand the project in thirty seconds.
+
+---
+
+# API Documentation
+
+Document every endpoint.
+
+Example
+
+```http
+POST /api/upload
+```
+
+Purpose
+
+Upload CSV.
+
+Input
+
+Multipart file.
+
+Output
+
+Dataset summary.
+
+Possible errors.
+
+Example response.
+
+Every endpoint documented identically.
+
+---
+
+# UI Polish
+
+Every loading state
+
+Skeleton.
+
+Never spinner.
+
+Every destructive action
+
+Confirmation dialog.
+
+Every completed action
+
+Toast.
+
+Every warning
+
+Inline explanation.
+
+Every error
+
+Recovery suggestion.
+
+---
+
+# User Experience Principles
+
+The user should never ask
+
+"What is happening?"
+
+"What should I do next?"
+
+"Did it work?"
+
+The interface answers these automatically.
+
+---
+
+# Future Extensibility
+
+Even without a database today, every service should expose interfaces instead of concrete implementations.
+
+Example
+
+```ts
+interface ImportStorage {
+
+    save()
+
+    load()
+
+    list()
+
+}
+```
+
+Current implementation
+
+```text
+MemoryStorage
+```
+
+Future
+
+```text
+PostgresStorage
+
+RedisStorage
+
+S3Storage
+```
+
+Business logic never changes.
+
+---
+
+# Deployment
+
+Frontend
+
+Vercel.
+
+Backend
+
+Railway or Render.
+
+Environment based configuration.
+
+Health endpoint enabled.
+
+Production logging enabled.
+
+Compression enabled.
+
+Static assets cached.
+
+---
+
+# Final Product Philosophy
+
+Aster should not feel like a hackathon submission.
+
+It should feel like the first version of a product that a company could confidently put in front of customers.
+
+A user should be able to upload an unpredictable CSV, watch the system explain every step of its reasoning, inspect every decision, understand every repair, and export clean CRM ready data with confidence. The AI should feel like a carefully supervised expert inside a robust software system rather than the system itself.
+
+The lasting impression should not be that the application uses an LLM. It should be that the application is exceptionally well engineered.
+
+
+# Future Roadmap
+
+The codebase should be designed so that every future feature is an addition, never a rewrite.
+
+Every new capability should plug into an existing engine.
+
+---
+
+# Phase 2
+
+## Excel Support
+
+Today
+
+```text
+CSV
+```
+
+Tomorrow
+
+```text
+CSV
+
+Excel
+
+Google Sheets
+
+TSV
+```
+
+Only the parser changes.
+
+Everything downstream remains identical.
+
+---
+
+## AI Provider Abstraction
+
+Never couple business logic to Gemini.
+
+```text
+AIEngine
+
+↓
+
+Gemini
+
+Claude
+
+OpenAI
+
+Mistral
+
+Llama
+
+Future Models
+```
+
+Every provider implements
+
+```ts
+interface AIProvider {
+
+    generate()
+
+}
+```
+
+Switching models becomes one configuration change.
+
+---
+
+## Streaming AI
+
+Instead of waiting
+
+```text
+0%
+
+↓
+
+100%
+```
+
+The user sees
+
+```text
+Batch 1 Complete
+
+↓
+
+Batch 2 Complete
+
+↓
+
+Batch 3 Complete
+```
+
+Results stream into the UI.
+
+The system feels much faster.
+
+---
+
+## Human Review Queue
+
+Rows with
+
+```text
+Confidence < 70%
+```
+
+Automatically enter
+
+```text
+Needs Review
+```
+
+The user edits only uncertain fields.
+
+Everything else imports automatically.
+
+---
+
+## Schema Memory
+
+Today
+
+The system forgets every upload.
+
+Tomorrow
+
+The system remembers.
+
+Example
+
+User uploads
+
+```text
+Customer Name
+
+Customer Email
+
+Customer Mobile
+```
+
+Next upload
+
+Recognition becomes instant.
+
+---
+
+## AI Learning
+
+The user repeatedly changes
+
+```text
+Warm Lead
+
+↓
+
+Qualified
+```
+
+The system notices.
+
+Future imports automatically suggest
+
+```text
+Qualified
+```
+
+without another prompt.
+
+---
+
+## Semantic Schema Detection
+
+Instead of matching only names
+
+The engine understands meaning.
+
+Example
+
+```text
+Point of Contact
+
+↓
+
+Primary Contact
+
+↓
+
+Customer Representative
+
+↓
+
+Relationship Owner
+```
+
+All become
+
+```text
+contact_name
+```
+
+---
+
+## Import Templates
+
+Frequently imported datasets become reusable.
+
+```text
+Facebook Leads
+
+Google Ads
+
+Meta Forms
+
+HubSpot
+
+Salesforce
+
+Zoho
+```
+
+Zero configuration.
+
+---
+
+## AI Self Evaluation
+
+After every batch
+
+Gemini evaluates
+
+its own confidence.
+
+If confidence
+
+drops below threshold
+
+Automatically trigger
+
+Repair Engine.
+
+---
+
+## Multi Model Verification
+
+Important fields
+
+run through
+
+two different models.
+
+Agreement
+
+↓
+
+High confidence.
+
+Disagreement
+
+↓
+
+Human review.
+
+---
+
+## Automatic Prompt Evolution
+
+Collect
+
+Validation Failures.
+
+Identify
+
+Common mistakes.
+
+Generate
+
+Better prompts.
+
+The application gradually improves.
+
+---
+
+# Design Principles
+
+## Every screen answers three questions
+
+```text
+Where am I?
+
+What is happening?
+
+What happens next?
+```
+
+If any answer is unclear
+
+The UI is wrong.
+
+---
+
+## Every click has feedback
+
+Hover
+
+Animation.
+
+Click
+
+Immediate response.
+
+Upload
+
+Progress.
+
+Import
+
+Confirmation.
+
+Download
+
+Toast.
+
+The interface never feels frozen.
+
+---
+
+## Every delay communicates
+
+Instead of
+
+```text
+Loading...
+```
+
+Show
+
+```text
+Detecting Schema
+
+Parsing 8,432 rows
+
+Estimating AI Cost
+
+Preparing Batch 4 of 17
+```
+
+People tolerate waiting.
+
+They dislike uncertainty.
+
+---
+
+## Never surprise the user
+
+Bad
+
+```text
+Import Failed
+```
+
+Good
+
+```text
+Batch 12 failed because the AI returned invalid JSON.
+
+Automatically repaired.
+
+Retry succeeded.
+
+Continuing import.
+```
+
+---
+
+# Product Quality Checklist
+
+Before shipping
+
+The answer to every question should be **Yes**.
+
+### Reliability
+
+✅ Can import malformed CSVs.
+
+✅ Continues after partial failures.
+
+✅ No duplicate processing.
+
+✅ Every failure recoverable.
+
+---
+
+### Performance
+
+✅ Streams CSV.
+
+✅ Virtualized tables.
+
+✅ Adaptive AI batches.
+
+✅ Parallel preprocessing.
+
+---
+
+### AI
+
+✅ Structured JSON output.
+
+✅ Confidence scoring.
+
+✅ Prompt versioning.
+
+✅ Deterministic validation.
+
+---
+
+### Engineering
+
+✅ No duplicated logic.
+
+✅ Shared types.
+
+✅ Small modules.
+
+✅ Pure functions.
+
+---
+
+### UI
+
+✅ Accessible.
+
+✅ Responsive.
+
+✅ Beautiful.
+
+✅ Explainable.
+
+---
+
+### Documentation
+
+✅ Architecture diagram.
+
+✅ API documentation.
+
+✅ Setup guide.
+
+✅ Engineering decisions.
+
+---
+
+### Developer Experience
+
+A new engineer should be able to
+
+Run the project
+
+within
+
+five minutes.
+
+Understand the architecture
+
+within
+
+thirty minutes.
+
+Ship a feature
+
+within
+
+one day.
+
+That is the standard.
+
+---
+
+# Guiding Principle
+
+Aster is not a CSV importer with AI.
+
+It is a **deterministic data processing platform** where artificial intelligence is used only for the parts that genuinely require reasoning.
+
+Every other responsibility belongs to carefully designed software.
+
+The final experience should make users feel that they uploaded a messy spreadsheet into a system that understood it, cleaned it, explained every decision it made, recovered gracefully from mistakes, and produced reliable CRM ready data without requiring them to understand how any of it worked. That feeling of confidence is the real product.
+
+
+# Engineering Decision Record (EDR)
+
+Every major engineering choice should be documented.
+
+Not for the reviewer.
+
+For your future self.
+
+Example
+
+```
+EDR-001
+
+Decision
+
+Streaming CSV parsing.
+
+Reason
+
+Constant memory usage.
+
+Alternative
+
+Read entire file.
+
+Rejected because
+
+Large datasets become impossible.
+
+Tradeoff
+
+Slightly more implementation complexity.
+```
+
+Maintain these inside
+
+```
+docs/decisions/
+```
+
+---
+
+# Internal Data Flow
+
+Every record should move through immutable transformations.
+
+Never mutate objects.
+
+Bad
+
+```ts
+record.phone = normalize(record.phone);
+```
+
+Good
+
+```ts
+const normalizedRecord = normalizePhone(record);
+```
+
+The old object always exists.
+
+Debugging becomes trivial.
+
+---
+
+# Domain Driven Structure
+
+Never organize by technology.
+
+Bad
+
+```
+controllers/
+
+routes/
+
+services/
+
+utils/
+
+```
+
+Good
+
+```
+upload/
+
+schema/
+
+validation/
+
+ai/
+
+repair/
+
+export/
+
+```
+
+Each feature owns everything it needs.
+
+Example
+
+```
+schema/
+
+    controller.ts
+
+    service.ts
+
+    validator.ts
+
+    prompt.ts
+
+    types.ts
+
+    constants.ts
+
+    tests/
+```
+
+An engineer working on schema detection never leaves this folder.
+
+---
+
+# Business Objects
+
+Everything revolves around these.
+
+```
+Dataset
+
+↓
+
+Column
+
+↓
+
+Record
+
+↓
+
+Batch
+
+↓
+
+ImportJob
+
+↓
+
+CRMRecord
+```
+
+Nothing else.
+
+---
+
+# Data Contracts
+
+Every engine accepts
+
+one object.
+
+Returns
+
+one object.
+
+Example
+
+```ts
+SchemaEngine
+
+Input
+
+Dataset
+
+↓
+
+Output
+
+DetectedSchema
+```
+
+No engine knows who calls it.
+
+No engine knows who uses its output.
+
+Maximum decoupling.
+
+---
+
+# Internal Event System
+
+Even without Redis.
+
+Even without Kafka.
+
+Even without queues.
+
+Think in events.
+
+```
+DatasetUploaded
+
+↓
+
+DatasetAnalyzed
+
+↓
+
+SchemaDetected
+
+↓
+
+ImportStarted
+
+↓
+
+BatchStarted
+
+↓
+
+BatchCompleted
+
+↓
+
+ValidationCompleted
+
+↓
+
+ExportCompleted
+```
+
+Initially
+
+Simple TypeScript EventEmitter.
+
+Future
+
+Redis.
+
+Future
+
+Kafka.
+
+No business logic changes.
+
+---
+
+# Every Engine Has Four Parts
+
+```
+Input
+
+↓
+
+Process
+
+↓
+
+Validate
+
+↓
+
+Output
+```
+
+Nothing else.
+
+---
+
+# Engine Contract
+
+Every engine exposes
+
+```ts
+interface Engine<I, O> {
+
+    execute(input: I): Promise<O>;
+
+}
+```
+
+Everything follows this.
+
+Testing becomes effortless.
+
+---
+
+# File Naming Convention
+
+Never
+
+```
+helpers.ts
+
+misc.ts
+
+common.ts
+
+functions.ts
+```
+
+These become garbage drawers.
+
+Instead
+
+```
+detect-schema.ts
+
+estimate-tokens.ts
+
+normalize-phone.ts
+
+repair-status.ts
+```
+
+Every filename answers
+
+"What does this do?"
+
+---
+
+# Utilities Rule
+
+Utilities should almost not exist.
+
+If a function belongs somewhere
+
+Move it there.
+
+Bad
+
+```
+utils/
+
+    csv.ts
+
+    ai.ts
+
+    string.ts
+
+    misc.ts
+```
+
+Good
+
+```
+schema/
+
+validation/
+
+upload/
+
+```
+
+The best utils folder
+
+is a tiny utils folder.
+
+---
+
+# Constants
+
+Never
+
+```ts
+if(status==="qualified")
+```
+
+Always
+
+```ts
+LeadStatus.QUALIFIED
+```
+
+Enums.
+
+Constants.
+
+No magic strings.
+
+---
+
+# Magic Numbers
+
+Never
+
+```ts
+batchSize=37
+```
+
+Instead
+
+```ts
+const MAX_BATCH_TOKENS = 6000;
+```
+
+Code becomes self documenting.
+
+---
+
+# Time
+
+Never
+
+```ts
+Date.now()
+```
+
+throughout the codebase.
+
+Create
+
+```
+Clock
+
+↓
+
+now()
+
+↓
+
+timestamp()
+
+↓
+
+duration()
+```
+
+Future testing becomes easy.
+
+---
+
+# Randomness
+
+Never call
+
+```
+Math.random()
+```
+
+inside business logic.
+
+Inject
+
+```
+RandomGenerator
+```
+
+Future deterministic testing.
+
+---
+
+# AI Provider Interface
+
+```ts
+interface AIProvider {
+
+    generate(
+
+        prompt,
+
+        options
+
+    );
+
+}
+```
+
+Gemini implements it.
+
+Tomorrow
+
+Claude.
+
+Nothing changes.
+
+---
+
+# Prompt Builder Pattern
+
+Never concatenate prompts.
+
+Bad
+
+```ts
+prompt += rows;
+```
+
+Good
+
+```
+PromptBuilder
+
+↓
+
+System
+
+↓
+
+Task
+
+↓
+
+Rules
+
+↓
+
+Dataset
+
+↓
+
+Batch
+
+↓
+
+Output Schema
+
+↓
+
+Examples
+
+↓
+
+Prompt
+```
+
+Composable.
+
+---
+
+# Prompt Testing
+
+Every prompt has
+
+Input
+
+↓
+
+Expected JSON
+
+↓
+
+Snapshot
+
+Store snapshots.
+
+Future prompt edits become measurable.
+
+---
+
+# Prompt Analytics
+
+Track
+
+```
+Prompt Version
+
+Latency
+
+Cost
+
+Failures
+
+Retries
+
+Repair Count
+```
+
+Future optimization becomes data driven.
+
+---
+
+# AI Safety
+
+Every response validated.
+
+If invalid
+
+```
+Repair
+
+↓
+
+Retry
+
+↓
+
+Reject
+```
+
+Never
+
+trust first output.
+
+---
+
+# Confidence Formula
+
+Not AI confidence alone.
+
+```
+Overall
+
+=
+
+Schema
+
+×
+
+Validation
+
+×
+
+Repair
+
+×
+
+AI
+
+×
+
+Business Rules
+```
+
+Weighted average.
+
+Much more reliable.
+
+---
+
+# Explainability Object
+
+Every mapped field stores
+
+```ts
+{
+
+field,
+
+confidence,
+
+reason,
+
+source,
+
+engine
+
+}
+```
+
+Hover in UI.
+
+Complete transparency.
+
+---
+
+# Processing Graph
+
+Think DAG.
+
+Not chain.
+
+```
+Encoding
+
+────┐
+
+Delimiter
+
+────┤
+
+Rows
+
+────┤
+
+Statistics
+
+────┤
+
+Headers
+
+────┘
+
+↓
+
+Schema
+```
+
+Many things happen simultaneously.
+
+---
+
+# Memory Lifecycle
+
+Every batch
+
+```
+Load
+
+↓
+
+Process
+
+↓
+
+Export
+
+↓
+
+Free Memory
+```
+
+Memory usage remains stable forever.
+
+---
+
+# Cache Strategy
+
+Without database.
+
+In memory.
+
+Cache
+
+Schema Detection.
+
+Prompt Templates.
+
+Enum Lists.
+
+Column Synonyms.
+
+Token Estimates.
+
+No duplicate computation.
+
+---
+
+# Synonym Dictionary
+
+Huge advantage.
+
+```
+Mobile
+
+Phone
+
+Contact
+
+Telephone
+
+Cell
+
+Mob
+
+Mobile No
+
+Phone Number
+
+WhatsApp
+
+↓
+
+phone
+```
+
+AI called only if dictionary fails.
+
+---
+
+# CRM Vocabulary
+
+Internal enums.
+
+```
+Lead Status
+
+Lead Source
+
+Industry
+
+Priority
+
+Country
+
+State
+
+Currency
+
+Language
+```
+
+Centralized.
+
+AI must obey them.
+
+---
+
+# Repair Library
+
+One file per repair.
+
+```
+repair-phone.ts
+
+repair-email.ts
+
+repair-country.ts
+
+repair-status.ts
+
+repair-date.ts
+```
+
+Small.
+
+Independent.
+
+---
+
+# Validation Library
+
+```
+validate-phone.ts
+
+validate-email.ts
+
+validate-json.ts
+
+validate-schema.ts
+```
+
+Never one massive validator.
+
+---
+
+# Batch Metadata
+
+Each batch stores
+
+```
+Start Time
+
+End Time
+
+Rows
+
+Tokens
+
+Latency
+
+Repairs
+
+Failures
+
+Retries
+```
+
+Makes debugging effortless.
+
+---
+
+# User Trust Features
+
+After processing
+
+Show
+
+```
+97%
+
+Imported Automatically
+
+2%
+
+Required Repair
+
+1%
+
+Needs Manual Review
+```
+
+Users immediately understand system quality.
+
+---
+
+# Quality Gates
+
+Every batch passes
+
+```
+Gate 1
+
+Schema
+
+↓
+
+Gate 2
+
+Validation
+
+↓
+
+Gate 3
+
+Business Rules
+
+↓
+
+Gate 4
+
+Confidence
+
+↓
+
+Export
+```
+
+No bypass.
+
+---
+
+# Production Mindset
+
+Never ask
+
+> "Does it work?"
+
+Always ask
+
+> "What happens when it fails?"
+
+Then ask
+
+> "How will another engineer understand this in six months?"
+
+Then ask
+
+> "Can this process one hundred records?"
+
+Then
+
+> "Can it process one million?"
+
+If the architecture answers all four questions without changing shape, you've built a production system rather than a project.
+
+---
+
+# The One Rule That Governs Everything
+
+Every line of code should earn its place.
+
+If removing a line changes nothing, delete it.
+
+If a dependency saves only three lines, don't install it.
+
+If an abstraction is needed only once, don't create it.
+
+If an AI call can be replaced with deterministic logic, remove the AI call.
+
+The final codebase should feel surprisingly small for what it accomplishes. That is usually a sign of a mature engineering design.
+
+
+# Code Review Checklist
+
+Before writing any code, ask these questions.
+
+## Architecture
+
+Does this belong here?
+
+Is this the correct layer?
+
+Can another module own this?
+
+Will another engineer know where to find this?
+
+---
+
+## Function
+
+Can I split this?
+
+Can I delete this?
+
+Can I use a library?
+
+Can I make this pure?
+
+Can I reduce nesting?
+
+---
+
+## API
+
+Would I still like this endpoint six months from now?
+
+Would I expose this publicly?
+
+Is the response predictable?
+
+Is every error documented?
+
+---
+
+## UI
+
+Can a first time user understand this?
+
+Is the next action obvious?
+
+Can everything be keyboard navigated?
+
+Is there visual feedback?
+
+Would Stripe ship this screen?
+
+---
+
+## AI
+
+Can software solve this?
+
+Can regex solve this?
+
+Can heuristics solve this?
+
+Can a lookup table solve this?
+
+Only then
+
+Call the LLM.
+
+---
+
+## Performance
+
+Can this happen in parallel?
+
+Can this stream?
+
+Can this cache?
+
+Can this reuse work?
+
+Can this avoid work?
+
+The fastest code
+
+never runs.
+
+---
+
+# Feature List
+
+Every requirement from the assignment becomes a product feature.
+
+## CSV Upload
+
+Drag and Drop
+
+Browse
+
+Replace Upload
+
+File Validation
+
+Encoding Detection
+
+Delimiter Detection
+
+Row Estimation
+
+Column Estimation
+
+Memory Estimation
+
+Checksum
+
+Preview
+
+---
+
+## Dataset Intelligence
+
+Dataset Statistics
+
+Column Statistics
+
+Language Detection
+
+Duplicate Header Detection
+
+Missing Value Detection
+
+Average Token Estimation
+
+Longest Record Detection
+
+Estimated Processing Time
+
+Estimated AI Cost
+
+CRM Probability
+
+Dataset Health Score
+
+---
+
+## Schema Intelligence
+
+Automatic Field Mapping
+
+Header Synonym Detection
+
+Regex Matching
+
+Dictionary Matching
+
+Semantic Matching
+
+LLM Assisted Mapping
+
+Mapping Confidence
+
+Manual Override
+
+---
+
+## Preview
+
+Search
+
+Sort
+
+Column Resize
+
+Sticky Headers
+
+Pagination
+
+Virtualization
+
+Copy Cell
+
+Highlight Invalid Rows
+
+Highlight Missing Values
+
+Column Statistics
+
+---
+
+## AI Pipeline
+
+Adaptive Batching
+
+Prompt Versioning
+
+Token Estimation
+
+Batch Retry
+
+Structured Output
+
+Repair Queue
+
+Validation
+
+Confidence
+
+Reasoning
+
+---
+
+## Validation
+
+Email
+
+Phone
+
+Country
+
+Date
+
+Currency
+
+Lead Status
+
+Required Fields
+
+Duplicate Fields
+
+Business Rules
+
+Schema Rules
+
+---
+
+## Repair
+
+Whitespace
+
+Phone
+
+Email
+
+Country
+
+Dates
+
+Enums
+
+Encoding
+
+Unicode
+
+Missing Status
+
+Missing Country
+
+Duplicate Headers
+
+---
+
+## Import Report
+
+Imported
+
+Skipped
+
+Warnings
+
+Repairs
+
+Failures
+
+Confidence
+
+Duration
+
+Rows
+
+Batches
+
+Tokens
+
+Cost
+
+Checksum
+
+Timestamp
+
+---
+
+## Export
+
+Clean JSON
+
+Clean CSV
+
+Validation Report
+
+Import Report
+
+Confidence Report
+
+---
+
+# Internal Metrics
+
+Every upload measures
+
+Upload Time
+
+Parse Time
+
+Schema Time
+
+AI Time
+
+Validation Time
+
+Repair Time
+
+Export Time
+
+Total Time
+
+Rows Per Second
+
+Average Batch Time
+
+Average Token Count
+
+Repair Count
+
+Failure Count
+
+Retry Count
+
+Success Rate
+
+Average Confidence
+
+Dataset Trust Score
+
+---
+
+# Enterprise Features Already Ready
+
+Although no database exists today
+
+Design interfaces for
+
+Import History
+
+Undo Import
+
+User Accounts
+
+Organizations
+
+Projects
+
+Saved Templates
+
+Schema Library
+
+API Keys
+
+Webhooks
+
+Scheduled Imports
+
+Audit Logs
+
+Role Permissions
+
+Approval Workflow
+
+Nothing is implemented.
+
+Everything is prepared.
+
+---
+
+# AI Cost Optimization Engine
+
+This is one of the strongest differentiators.
+
+Most people simply call Gemini.
+
+Aster first estimates
+
+Dataset Complexity
+
+↓
+
+Average Tokens
+
+↓
+
+Expected Output
+
+↓
+
+Optimal Batch Size
+
+↓
+
+Estimated Cost
+
+↓
+
+Expected Runtime
+
+Before spending the first token.
+
+The user immediately sees
+
+```text
+Rows
+
+18,492
+
+Estimated Cost
+
+$0.013
+
+Estimated Runtime
+
+41 seconds
+
+Model
+
+Gemini Flash
+```
+
+Professional products estimate.
+
+Projects guess.
+
+---
+
+# Smart Import Modes
+
+Fast Mode
+
+Maximum speed.
+
+Lower reasoning.
+
+Standard Mode
+
+Balanced.
+
+Deep Analysis
+
+Highest accuracy.
+
+Maximum reasoning.
+
+This simply changes
+
+Prompt
+
+Batch Size
+
+Temperature
+
+Validation Strictness
+
+No duplicated logic.
+
+---
+
+# Import Health Score
+
+One metric.
+
+0 to 100.
+
+Calculated from
+
+Missing Values
+
+Duplicate Values
+
+Header Quality
+
+Encoding
+
+Repair Count
+
+Confidence
+
+Validation
+
+Displayed before importing.
+
+```text
+Dataset Health
+
+91
+
+Excellent
+```
+
+---
+
+# CRM Readiness Score
+
+Different from Health.
+
+Measures
+
+How ready the data is
+
+for CRM.
+
+Example
+
+```text
+CRM Ready
+
+97%
+
+Missing Emails
+
+2
+
+Duplicate Phones
+
+3
+
+Missing Company
+
+5
+```
+
+---
+
+# Explainability Timeline
+
+Every import becomes a timeline.
+
+```text
+12:31
+
+Upload Started
+
+12:31
+
+Delimiter Detected
+
+12:31
+
+UTF8 Detected
+
+12:31
+
+Schema Detection
+
+97%
+
+12:32
+
+Batch 1 Started
+
+12:32
+
+Batch 1 Complete
+
+12:33
+
+Validation Complete
+
+12:33
+
+Repair Complete
+
+12:34
+
+Export Generated
+```
+
+Users understand
+
+everything.
+
+---
+
+# Intelligent Warnings
+
+Instead of
+
+```text
+Warning
+```
+
+Generate
+
+```text
+47 rows are missing phone numbers.
+
+These records can still be imported but follow up workflows relying on phone calls may be affected.
+```
+
+Specific.
+
+Actionable.
+
+Professional.
+
+---
+
+# Empty States
+
+No Upload
+
+↓
+
+Guide.
+
+No Results
+
+↓
+
+Explain.
+
+No Errors
+
+↓
+
+Celebrate.
+
+Every state intentionally designed.
+
+---
+
+# README That Wins
+
+Most READMEs explain installation.
+
+Yours should explain engineering.
+
+Structure
+
+```text
+Hero Image
+
+↓
+
+Architecture Diagram
+
+↓
+
+Problem
+
+↓
+
+Solution
+
+↓
+
+Pipeline
+
+↓
+
+Key Features
+
+↓
+
+Engineering Decisions
+
+↓
+
+Project Structure
+
+↓
+
+API
+
+↓
+
+Screenshots
+
+↓
+
+Performance
+
+↓
+
+Future Roadmap
+
+↓
+
+Setup
+
+↓
+
+Run
+```
+
+The reviewer should understand the architecture before cloning.
+
+---
+
+# Screenshots to Include
+
+Landing
+
+Upload
+
+Dataset Intelligence
+
+Schema Detection
+
+Live Processing
+
+Logs
+
+Results Dashboard
+
+Confidence Table
+
+Import Report
+
+Architecture Diagram
+
+Mobile Responsive View
+
+These tell the story without reading the code.
+
+---
+
+# Demo Video
+
+Exactly three minutes.
+
+Minute One
+
+Problem.
+
+Minute Two
+
+Pipeline.
+
+Minute Three
+
+Engineering.
+
+No background music.
+
+No flashy edits.
+
+Just
+
+"I upload this CSV."
+
+"This is what happens."
+
+"This is why I built it this way."
+
+Recruiters remember engineers who explain systems clearly.
+
+---
+
+# Final Engineering Philosophy
+
+Aster is designed around a single belief.
+
+**Artificial intelligence should increase the quality of software, not replace software engineering.**
+
+Every deterministic problem is solved with deterministic code.
+
+Every ambiguous problem is solved with AI.
+
+Every AI decision is validated.
+
+Every validation is measurable.
+
+Every repair is explainable.
+
+Every user action receives feedback.
+
+Every component has one responsibility.
+
+Every function has one purpose.
+
+Every dependency justifies its existence.
+
+Every abstraction earns its place.
+
+The result is not simply a CSV importer.
+
+It is a production ready AI ingestion platform whose architecture remains understandable, extensible, and maintainable while processing real world, imperfect business data. It is the kind of system that could evolve from a hackathon submission into a commercial product without requiring a rewrite, because the design prioritizes clarity, determinism, and thoughtful engineering over unnecessary complexity.
+
+
+# Architecture Principles That Prevent Rewrite
+
+The biggest mistake junior engineers make is designing for today's assignment.
+
+The biggest mistake senior engineers make is overdesigning for tomorrow.
+
+The right answer is to design for **change**.
+
+Every module should be replaceable.
+
+Every dependency should be removable.
+
+Every implementation should hide behind an interface.
+
+---
+
+# The Dependency Rule
+
+The dependency graph should always point inward.
+
+Never outward.
+
+```text
+UI
+
+↓
+
+Application
+
+↓
+
+Domain
+
+↓
+
+Infrastructure
+```
+
+Business logic never knows
+
+Express
+
+Next.js
+
+Gemini
+
+PapaParse
+
+Multer
+
+These are implementation details.
+
+---
+
+# Clean Architecture
+
+```text
+                 Browser
+
+                    │
+
+                    ▼
+
+            Presentation Layer
+
+                    │
+
+                    ▼
+
+          Application Layer
+
+                    │
+
+                    ▼
+
+             Domain Layer
+
+                    │
+
+                    ▼
+
+          Infrastructure Layer
+```
+
+---
+
+## Presentation
+
+Only responsible for
+
+Showing data
+
+Collecting user input
+
+Rendering components
+
+Nothing else.
+
+---
+
+## Application
+
+Coordinates everything.
+
+It knows
+
+which engines
+
+run
+
+and
+
+in what order.
+
+It never knows
+
+how
+
+they work.
+
+---
+
+## Domain
+
+Contains
+
+the business.
+
+No framework imports.
+
+No HTTP.
+
+No React.
+
+No Express.
+
+No Gemini.
+
+Only
+
+business rules.
+
+---
+
+## Infrastructure
+
+Everything external.
+
+Gemini
+
+File System
+
+CSV Parser
+
+Logger
+
+Clock
+
+Future Database
+
+Future Cache
+
+Everything replaceable.
+
+---
+
+# The Anti Framework Rule
+
+Frameworks should disappear.
+
+If Next.js disappeared tomorrow
+
+Could the business logic survive?
+
+If the answer is no
+
+The architecture is wrong.
+
+---
+
+# Every Engine Should Look Like This
+
+```ts
+class SchemaEngine {
+
+    execute(input){
+
+        ...
+
+        return output;
+
+    }
+
+}
+```
+
+No inheritance.
+
+No decorators.
+
+No magic.
+
+---
+
+# The Golden Pipeline
+
+Every upload follows exactly this pipeline.
+
+```text
+Upload
+
+↓
+
+Verify
+
+↓
+
+Analyze
+
+↓
+
+Understand
+
+↓
+
+Normalize
+
+↓
+
+Batch
+
+↓
+
+Reason
+
+↓
+
+Validate
+
+↓
+
+Repair
+
+↓
+
+Score
+
+↓
+
+Explain
+
+↓
+
+Export
+```
+
+Notice
+
+There is no
+
+"AI"
+
+step.
+
+Because
+
+AI
+
+is hidden
+
+inside
+
+Reason.
+
+The product
+
+is not
+
+an AI product.
+
+The product
+
+is an
+
+Import Engine.
+
+---
+
+# Thinking Model
+
+Never think
+
+Rows.
+
+Think
+
+Datasets.
+
+---
+
+Never think
+
+Columns.
+
+Think
+
+Business Meaning.
+
+---
+
+Never think
+
+CSV.
+
+Think
+
+Knowledge Extraction.
+
+---
+
+Never think
+
+Prompt.
+
+Think
+
+Reasoning Contract.
+
+---
+
+Never think
+
+Response.
+
+Think
+
+Verified Output.
+
+---
+
+# Every Module Must Answer One Question
+
+Upload Engine
+
+Can this file be processed?
+
+---
+
+Dataset Engine
+
+What kind of dataset is this?
+
+---
+
+Schema Engine
+
+What do these columns mean?
+
+---
+
+Preparation Engine
+
+How can we improve the data?
+
+---
+
+Prompt Engine
+
+How do we explain this task to AI?
+
+---
+
+AI Engine
+
+What cannot be solved deterministically?
+
+---
+
+Validation Engine
+
+Is the response correct?
+
+---
+
+Repair Engine
+
+Can software repair it?
+
+---
+
+Confidence Engine
+
+How trustworthy is this output?
+
+---
+
+Export Engine
+
+How should the user consume it?
+
+---
+
+# Every Object Has One Owner
+
+Dataset
+
+Owned by
+
+Dataset Engine.
+
+---
+
+Prompt
+
+Owned by
+
+Prompt Engine.
+
+---
+
+CRM Record
+
+Owned by
+
+Domain.
+
+---
+
+Batch
+
+Owned by
+
+Batch Scheduler.
+
+---
+
+Statistics
+
+Owned by
+
+Analytics.
+
+Never let two modules own the same concept.
+
+---
+
+# Layered Validation
+
+Never validate once.
+
+Validate continuously.
+
+```text
+Upload
+
+↓
+
+CSV Validation
+
+↓
+
+Schema Validation
+
+↓
+
+Business Validation
+
+↓
+
+AI Validation
+
+↓
+
+Export Validation
+```
+
+Each stage reduces uncertainty.
+
+---
+
+# Progressive Confidence
+
+Confidence should evolve.
+
+```text
+Upload
+
+52%
+
+↓
+
+Schema
+
+81%
+
+↓
+
+AI
+
+91%
+
+↓
+
+Validation
+
+96%
+
+↓
+
+Repair
+
+98%
+
+```
+
+Users watch confidence increase.
+
+This builds trust.
+
+---
+
+# AI Cost Optimizer
+
+Before every request
+
+Estimate
+
+Prompt Tokens
+
+↓
+
+Expected Output Tokens
+
+↓
+
+Latency
+
+↓
+
+Price
+
+↓
+
+Choose
+
+Small Batch
+
+Medium Batch
+
+Large Batch
+
+Automatically.
+
+No hardcoded sizes.
+
+---
+
+# Semantic Dictionary
+
+One of the strongest competitive advantages.
+
+Build a local dictionary.
+
+Example
+
+```text
+fname
+
+↓
+
+First Name
+
+↓
+
+Given Name
+
+↓
+
+Customer Name
+
+↓
+
+Lead Name
+
+↓
+
+Primary Contact
+
+↓
+
+Person
+
+↓
+
+Contact
+
+↓
+
+first_name
+```
+
+This should contain
+
+hundreds
+
+of mappings.
+
+AI usage drops dramatically.
+
+---
+
+# Business Rule Catalog
+
+Never hardcode business rules.
+
+Instead
+
+```text
+rules/
+
+required-fields.ts
+
+lead-status.ts
+
+country.ts
+
+phone.ts
+
+email.ts
+
+duplicates.ts
+
+priority.ts
+```
+
+Every rule becomes testable.
+
+---
+
+# Explainability First
+
+Every decision stores
+
+```text
+Decision
+
+↓
+
+Evidence
+
+↓
+
+Confidence
+
+↓
+
+Engine
+
+↓
+
+Timestamp
+```
+
+Example
+
+```text
+Mapped
+
+mobile_no
+
+↓
+
+phone
+
+Evidence
+
+Dictionary Match
+
+Confidence
+
+99%
+
+Engine
+
+Schema Engine
+```
+
+Not because users need it.
+
+Because
+
+future debugging
+
+needs it.
+
+---
+
+# Internal Documentation
+
+Every module starts with
+
+```ts
+/**
+ * Purpose
+ *
+ * Inputs
+ *
+ * Outputs
+ *
+ * Guarantees
+ *
+ * Failure Modes
+ *
+ * Future Extensions
+ */
+```
+
+Not
+
+```ts
+// handles csv
+```
+
+Professional documentation explains contracts.
+
+---
+
+# Feature Flags
+
+Future proof from day one.
+
+```text
+featureFlags/
+
+aiRepair
+
+duplicateDetection
+
+deepAnalysis
+
+schemaMemory
+
+streamingResults
+```
+
+Today
+
+Always enabled.
+
+Tomorrow
+
+Remote config.
+
+No rewrite.
+
+---
+
+# Development Workflow
+
+Every feature follows
+
+```text
+Problem
+
+↓
+
+Design
+
+↓
+
+Interface
+
+↓
+
+Implementation
+
+↓
+
+Tests
+
+↓
+
+Documentation
+
+↓
+
+Review
+
+↓
+
+Merge
+```
+
+Never
+
+Code
+
+↓
+
+Think
+
+---
+
+# Git Strategy
+
+Every commit should compile.
+
+Every commit should be meaningful.
+
+Examples
+
+```text
+feat(schema): add semantic header detection
+
+fix(validation): repair malformed phone numbers
+
+refactor(batch): extract adaptive scheduler
+
+docs(readme): add architecture diagram
+```
+
+Reading commit history should tell the story of the project.
+
+---
+
+# The Final Mental Model
+
+Imagine five years from now.
+
+You return to Aster.
+
+You have forgotten everything.
+
+You clone the repository.
+
+Open any file.
+
+Within two minutes you understand it.
+
+Within one hour you can add a feature.
+
+Within one day you can deploy a new version.
+
+If that is true, the architecture succeeded.
+
+Because the highest form of software engineering is not writing code that works today.
+
+It is writing code that remains understandable long after the excitement of building it is gone.
+
+# The Invisible Engineering
+
+The best software has features users never notice.
+
+Not because they are unimportant.
+
+Because they simply work.
+
+Aster should have dozens of these.
+
+---
+
+# Invisible Feature 1
+
+## Automatic Encoding Recovery
+
+User uploads
+
+```text
+UTF16
+
+↓
+
+Automatically converted
+
+↓
+
+UTF8
+```
+
+No popup.
+
+No warning.
+
+No settings.
+
+It simply works.
+
+---
+
+# Invisible Feature 2
+
+## Delimiter Detection
+
+The user should never choose
+
+```text
+Comma
+
+Semicolon
+
+Tab
+
+Pipe
+```
+
+The engine determines it.
+
+Always.
+
+---
+
+# Invisible Feature 3
+
+## Header Recovery
+
+Many CSVs look like
+
+```text
+,,,,,
+John,Google,...
+...
+```
+
+First row isn't actually a header.
+
+Dataset Intelligence should detect this automatically.
+
+---
+
+# Invisible Feature 4
+
+## Empty Column Removal
+
+```text
+Name
+
+Email
+
+Phone
+
+Empty
+
+Empty
+
+Empty
+```
+
+Empty columns disappear automatically.
+
+---
+
+# Invisible Feature 5
+
+## Duplicate Header Repair
+
+```text
+Email
+
+Email
+
+Phone
+```
+
+Automatically rename internally
+
+```text
+Email
+
+Email_2
+
+Phone
+```
+
+Keep original labels for display.
+
+---
+
+# Invisible Feature 6
+
+## Smart Preview
+
+Never load
+
+50,000 rows.
+
+Show
+
+100 representative rows.
+
+Future rows continue streaming.
+
+---
+
+# Invisible Feature 7
+
+## Automatic Language Detection
+
+Dataset
+
+Spanish
+
+↓
+
+Prompt
+
+Spanish aware.
+
+Dataset
+
+German
+
+↓
+
+German aware.
+
+No user setting.
+
+---
+
+# Invisible Feature 8
+
+## Automatic Date Detection
+
+```text
+12/03/2025
+```
+
+Infer
+
+Is this
+
+March 12
+
+or
+
+12 March?
+
+Based on
+
+Country
+
+Dataset
+
+Other rows.
+
+---
+
+# Invisible Feature 9
+
+## Phone Region Detection
+
+```text
+9876543210
+```
+
+Infer
+
+India
+
+↓
+
++91
+
+No prompt required.
+
+---
+
+# Invisible Feature 10
+
+## Dataset Fingerprint
+
+Every upload creates
+
+```text
+Dataset ID
+
+Checksum
+
+Structure Hash
+
+Schema Hash
+```
+
+Later
+
+Duplicate imports become detectable.
+
+---
+
+# Explainability System
+
+Every AI decision should have evidence.
+
+Not chain of thought.
+
+Evidence.
+
+Example
+
+```text
+Mapped
+
+mobile_no
+
+↓
+
+phone
+
+Reason
+
+Dictionary Match
+
+Confidence
+
+99%
+```
+
+---
+
+Another
+
+```text
+Mapped
+
+remarks
+
+↓
+
+lead_status
+
+Reason
+
+AI inferred intent from note.
+
+Confidence
+
+74%
+```
+
+Users should never wonder
+
+"Why?"
+
+---
+
+# AI Confidence is Not Enough
+
+Instead compute
+
+```text
+Structural Confidence
+
++
+
+Schema Confidence
+
++
+
+Business Confidence
+
++
+
+Validation Confidence
+
++
+
+Repair Confidence
+
+=
+
+Overall Confidence
+```
+
+Far more trustworthy.
+
+---
+
+# Quality Dashboard
+
+Instead of
+
+Imported
+
+842
+
+Build
+
+```text
+Dataset Health
+
+96%
+
+Schema Confidence
+
+98%
+
+Validation Success
+
+99%
+
+Repair Success
+
+95%
+
+AI Confidence
+
+94%
+
+Overall Trust
+
+97%
+```
+
+Feels enterprise.
+
+---
+
+# AI Inspector
+
+Every batch
+
+Expandable.
+
+```text
+Batch 4
+
+↓
+
+Rows
+
+41
+
+↓
+
+Tokens
+
+1321
+
+↓
+
+Latency
+
+2.8s
+
+↓
+
+Confidence
+
+95%
+
+↓
+
+Repairs
+
+2
+```
+
+Amazing debugging tool.
+
+---
+
+# Developer Inspector
+
+Hidden panel.
+
+Keyboard shortcut.
+
+```
+Ctrl + Shift + D
+```
+
+Shows
+
+Memory
+
+CPU
+
+Token Usage
+
+Batch Queue
+
+Retry Queue
+
+Request Timeline
+
+Current Engine
+
+This is for engineers.
+
+Not users.
+
+---
+
+# Smart Notifications
+
+Instead of
+
+Import Complete.
+
+Show
+
+```text
+842 records imported successfully.
+
+19 values repaired automatically.
+
+3 records require review.
+
+Estimated CRM readiness
+
+97%.
+```
+
+Notifications become useful.
+
+---
+
+# Smart Search
+
+After import
+
+Search
+
+Across
+
+Everything.
+
+```text
+Search
+
+Google
+
+↓
+
+Rows
+
+Status
+
+Company
+
+Notes
+
+Email
+```
+
+Not just table filtering.
+
+---
+
+# Interactive Schema Mapping
+
+Instead of
+
+Static table.
+
+Build
+
+```text
+CSV Column
+
+↓
+
+Detected Mapping
+
+↓
+
+Confidence
+
+↓
+
+Dropdown Override
+```
+
+Users can manually override.
+
+AI immediately recalculates.
+
+---
+
+# Undo
+
+Before importing
+
+Generate
+
+```text
+Import Plan
+```
+
+Instead of directly importing.
+
+Future
+
+Undo becomes possible.
+
+---
+
+# Dry Run Mode
+
+One of the strongest features.
+
+Instead of importing.
+
+Simulate.
+
+Show
+
+Everything.
+
+Nothing written.
+
+Users love this.
+
+---
+
+# AI Cost Simulator
+
+Before AI runs.
+
+```text
+Estimated
+
+Prompt Tokens
+
+Output Tokens
+
+Latency
+
+Cost
+
+API Calls
+
+Batch Count
+```
+
+Feels premium.
+
+---
+
+# AI Strategy Selector
+
+Internally.
+
+Not exposed.
+
+The system automatically decides
+
+Simple Dataset
+
+↓
+
+Fast Prompt.
+
+Complex Dataset
+
+↓
+
+Detailed Prompt.
+
+Huge Dataset
+
+↓
+
+Compressed Prompt.
+
+The user never knows.
+
+---
+
+# Schema Graph
+
+Visualize
+
+```text
+CSV
+
+↓
+
+Canonical
+
+↓
+
+CRM
+```
+
+Every mapping shown.
+
+Great for understanding.
+
+---
+
+# Batch Timeline
+
+Instead of numbers.
+
+Timeline.
+
+```text
+Batch 1
+
+██████████
+
+Done
+
+Batch 2
+
+██████████
+
+Done
+
+Batch 3
+
+██████
+
+Running
+
+Batch 4
+
+Waiting
+```
+
+Looks alive.
+
+---
+
+# Dataset Timeline
+
+```text
+Uploaded
+
+↓
+
+Analyzed
+
+↓
+
+Schema
+
+↓
+
+Prepared
+
+↓
+
+Reasoned
+
+↓
+
+Validated
+
+↓
+
+Exported
+```
+
+Everything visible.
+
+---
+
+# Feature Discovery
+
+The UI should never require documentation.
+
+Every feature teaches itself.
+
+Hover
+
+Tooltip.
+
+First upload
+
+Small walkthrough.
+
+Second upload
+
+No walkthrough.
+
+---
+
+# Keyboard First
+
+Every action
+
+Shortcut.
+
+```text
+U
+
+Upload
+
+/
+
+Search
+
+Esc
+
+Close
+
+Ctrl + Enter
+
+Import
+
+Ctrl + D
+
+Download
+```
+
+Power users notice.
+
+---
+
+# Responsive Philosophy
+
+Not mobile friendly.
+
+Mobile native.
+
+Desktop
+
+Optimized.
+
+Tablet
+
+Optimized.
+
+Mobile
+
+Optimized.
+
+Different layouts.
+
+Not scaled layouts.
+
+---
+
+# Internationalization Ready
+
+Every string
+
+Lives here.
+
+```text
+locales/
+
+en
+
+hi
+
+fr
+
+de
+
+es
+```
+
+Future translation.
+
+No code changes.
+
+---
+
+# Accessibility Beyond ARIA
+
+Support
+
+Reduced motion.
+
+High contrast.
+
+Large text.
+
+Keyboard only.
+
+Screen readers.
+
+Color blindness.
+
+Enterprise software should work for everyone.
+
+---
+
+# The Aster Standard
+
+Every feature added to Aster must satisfy five questions before it is accepted.
+
+**Useful.**
+
+Does it solve a real problem?
+
+**Simple.**
+
+Can a new engineer understand it quickly?
+
+**Reliable.**
+
+Does it fail safely?
+
+**Replaceable.**
+
+Can its implementation be swapped without changing the rest of the system?
+
+**Explainable.**
+
+Can both the user and the developer understand why it behaved the way it did?
+
+If a feature cannot satisfy all five, it does not belong in Aster.
+
+This standard becomes the filter that keeps the codebase small, maintainable, and capable of growing for years without collapsing under its own complexity.
+
+# Engineering Manifesto
+
+Aster should never feel like software that was written.
+
+It should feel like software that was discovered.
+
+Every module should look inevitable.
+
+Every function should feel like the only reasonable implementation.
+
+Nothing clever.
+
+Nothing surprising.
+
+Nothing magical.
+
+---
+
+# The Four Laws of Aster
+
+## Law 1
+
+**Every piece of information has exactly one source of truth.**
+
+Example
+
+Phone normalization.
+
+Never normalize
+
+Inside Parser.
+
+Inside AI.
+
+Inside Validation.
+
+Inside Export.
+
+One place.
+
+```text
+PhoneNormalizer
+```
+
+Everything calls it.
+
+---
+
+## Law 2
+
+**Every transformation must be reversible.**
+
+Example
+
+```text
+Original
+
+Mobile Number
+
+↓
+
+Canonical
+
+phone
+
+↓
+
+Export
+```
+
+Never lose
+
+Original header
+
+Original value
+
+Original confidence
+
+Everything remains traceable.
+
+---
+
+## Law 3
+
+**Every expensive computation happens once.**
+
+Bad
+
+```text
+Estimate Tokens
+
+↓
+
+AI
+
+↓
+
+Estimate Again
+
+↓
+
+Validation
+
+↓
+
+Estimate Again
+```
+
+Good
+
+```text
+Estimate Once
+
+↓
+
+Reuse Everywhere
+```
+
+---
+
+## Law 4
+
+**Nothing waits unless it absolutely has to.**
+
+If two operations don't depend on each other
+
+Run them together.
+
+Always.
+
+---
+
+# The Engineering Pyramid
+
+Every feature is built from the bottom.
+
+Never from the top.
+
+```text
+                 UI
+
+              Application
+
+           Business Rules
+
+         Deterministic Logic
+
+      Infrastructure & Platform
+```
+
+Most projects begin at the UI.
+
+Aster begins at deterministic logic.
+
+---
+
+# The Import Lifecycle
+
+Internally every import becomes an object.
+
+```ts
+ImportSession
+
+↓
+
+Dataset
+
+↓
+
+Schema
+
+↓
+
+Analysis
+
+↓
+
+Batches
+
+↓
+
+Results
+
+↓
+
+Reports
+```
+
+Everything revolves around
+
+ImportSession.
+
+Nothing else.
+
+---
+
+# ImportSession
+
+This becomes the heart of the system.
+
+```ts
+interface ImportSession{
+
+id
+
+status
+
+dataset
+
+analysis
+
+schema
+
+batches
+
+statistics
+
+exports
+
+logs
+
+}
+```
+
+Every engine updates
+
+ImportSession.
+
+No globals.
+
+No scattered state.
+
+---
+
+# Internal State Machine
+
+Imports should never jump randomly.
+
+```text
+CREATED
+
+↓
+
+UPLOADING
+
+↓
+
+ANALYZING
+
+↓
+
+SCHEMA_READY
+
+↓
+
+PROCESSING
+
+↓
+
+VALIDATING
+
+↓
+
+REPAIRING
+
+↓
+
+EXPORTING
+
+↓
+
+COMPLETED
+```
+
+Failures
+
+```text
+FAILED
+
+↓
+
+RETRYING
+
+↓
+
+PROCESSING
+```
+
+Every transition valid.
+
+Nothing else.
+
+---
+
+# Engine Lifecycle
+
+Every engine follows identical steps.
+
+```text
+Initialize
+
+↓
+
+Validate Input
+
+↓
+
+Execute
+
+↓
+
+Validate Output
+
+↓
+
+Emit Event
+
+↓
+
+Return
+```
+
+This consistency reduces bugs.
+
+---
+
+# Configuration Philosophy
+
+No engine owns configuration.
+
+Everything comes from
+
+```text
+ConfigService
+```
+
+Example
+
+Instead of
+
+```ts
+batchSize = 40
+```
+
+Use
+
+```ts
+config.batch.maximumSize
+```
+
+One place.
+
+---
+
+# Global Constants
+
+```text
+MAX_UPLOAD_SIZE
+
+MAX_TOKEN_LIMIT
+
+MAX_RETRIES
+
+MIN_CONFIDENCE
+
+SUPPORTED_ENCODINGS
+
+SUPPORTED_DELIMITERS
+
+SUPPORTED_LANGUAGES
+```
+
+No magic values.
+
+Ever.
+
+---
+
+# Data Classification
+
+Every uploaded column belongs to one category.
+
+```text
+Identity
+
+↓
+
+Contact
+
+↓
+
+Location
+
+↓
+
+Business
+
+↓
+
+Marketing
+
+↓
+
+CRM
+
+↓
+
+Financial
+
+↓
+
+Unknown
+```
+
+Unknown columns
+
+receive
+
+AI attention.
+
+Known columns
+
+stay deterministic.
+
+---
+
+# Semantic Engine
+
+This is where Aster becomes different.
+
+Every header receives
+
+three scores.
+
+```text
+Dictionary Score
+
+Regex Score
+
+Semantic Score
+```
+
+Then
+
+combined.
+
+Example
+
+```text
+Phone
+
+Dictionary
+
+100
+
+Regex
+
+100
+
+Semantic
+
+98
+
+Overall
+
+99.3
+```
+
+No AI required.
+
+---
+
+Example
+
+```text
+Representative
+
+Dictionary
+
+0
+
+Regex
+
+0
+
+Semantic
+
+82
+
+↓
+
+AI Verification
+
+↓
+
+Sales Representative
+
+↓
+
+contact_name
+```
+
+Only ambiguous cases use AI.
+
+---
+
+# AI Escalation Strategy
+
+Level One
+
+Software.
+
+↓
+
+Level Two
+
+Heuristics.
+
+↓
+
+Level Three
+
+Similarity.
+
+↓
+
+Level Four
+
+AI.
+
+Never skip levels.
+
+---
+
+# AI Request Optimizer
+
+Before every AI request
+
+remove
+
+everything unnecessary.
+
+Never send
+
+Unused columns.
+
+Duplicate values.
+
+Repeated examples.
+
+Blank rows.
+
+Noise.
+
+Only useful context survives.
+
+---
+
+# Context Builder
+
+Instead of
+
+```text
+Entire CSV
+```
+
+Build
+
+```text
+Dataset Summary
+
+↓
+
+Representative Records
+
+↓
+
+Detected Fields
+
+↓
+
+Business Rules
+
+↓
+
+Current Batch
+```
+
+The model understands
+
+the dataset
+
+before
+
+the rows.
+
+---
+
+# Adaptive Prompting
+
+Prompt changes automatically.
+
+Example
+
+Simple Dataset
+
+```text
+Name
+
+Email
+
+Phone
+```
+
+Prompt
+
+Tiny.
+
+---
+
+Enterprise Dataset
+
+```text
+Lead
+
+Campaign
+
+Source
+
+Revenue
+
+Company
+
+Status
+
+Notes
+
+Sales Rep
+
+...
+```
+
+Prompt
+
+Detailed.
+
+The user never notices.
+
+---
+
+# Runtime Optimizer
+
+Continuously measures
+
+Memory
+
+Latency
+
+Token Rate
+
+Repair Rate
+
+Retry Rate
+
+If any metric degrades
+
+adapt.
+
+Example
+
+```text
+Large Responses
+
+↓
+
+Reduce Batch Size
+```
+
+Example
+
+```text
+High Confidence
+
+↓
+
+Increase Batch Size
+```
+
+The pipeline optimizes itself.
+
+---
+
+# Progressive Intelligence
+
+The application should appear
+
+to become smarter
+
+during processing.
+
+Example
+
+Initial
+
+```text
+Schema Confidence
+
+74%
+```
+
+After Analysis
+
+```text
+89%
+```
+
+After AI
+
+```text
+95%
+```
+
+After Validation
+
+```text
+98%
+```
+
+The user watches uncertainty disappear.
+
+---
+
+# Engineering Heuristic
+
+Every file should answer one sentence.
+
+Parser
+
+"I understand CSV."
+
+Schema
+
+"I understand headers."
+
+Validator
+
+"I verify correctness."
+
+Repair
+
+"I fix mistakes."
+
+Exporter
+
+"I produce output."
+
+If a file answers two sentences
+
+split it.
+
+---
+
+# The Senior Engineer Test
+
+Imagine a Staff Engineer from Stripe joins your team.
+
+They open your repository.
+
+Without asking you anything they should understand
+
+* where every feature lives
+* why every module exists
+* how every request flows
+* where to add a new feature
+* where to debug a failure
+
+If they cannot, the architecture is not yet simple enough.
+
+---
+
+# The AI Coding Test
+
+Imagine Claude, GPT, Gemini, or any future coding model is asked:
+
+> "Add support for LinkedIn Lead Gen CSV imports."
+
+The model should be able to complete the task by reading only:
+
+```text
+Schema Engine
+
+↓
+
+Dictionary
+
+↓
+
+Business Rules
+
+↓
+
+Tests
+```
+
+If the model must inspect thirty unrelated files, the architecture is too tightly coupled.
+
+Aster should be designed not only for human maintainers but also for future AI assisted development, where clear boundaries, deterministic contracts, and small focused modules dramatically improve both engineering velocity and long term maintainability.
+
+# Engineering Doctrine
+
+Every engineer eventually reaches a point where they realize:
+
+> Software is not code.
+
+Software is the movement of information through constraints.
+
+Aster is designed around information.
+
+Not files.
+
+Not APIs.
+
+Not AI.
+
+Information.
+
+---
+
+# The Seven Layers of Intelligence
+
+Every dataset climbs seven layers.
+
+```text
+Raw Bytes
+
+↓
+
+Structured Data
+
+↓
+
+Validated Data
+
+↓
+
+Understood Data
+
+↓
+
+Business Data
+
+↓
+
+Trusted Data
+
+↓
+
+Actionable Data
+```
+
+CSV parsing reaches
+
+Structured Data.
+
+Most products stop there.
+
+Aster continues.
+
+---
+
+# Layer 1
+
+## Raw Bytes
+
+Input
+
+```text
+CSV
+
+Excel
+
+TSV
+
+Clipboard
+
+Drag Drop
+```
+
+Everything becomes
+
+```text
+Raw Dataset
+```
+
+Nothing interpreted.
+
+---
+
+# Layer 2
+
+## Structured Data
+
+Parser understands
+
+Rows
+
+Columns
+
+Delimiter
+
+Encoding
+
+Quotes
+
+Escaping
+
+Nothing semantic.
+
+---
+
+# Layer 3
+
+## Validated Data
+
+Dataset cleaned.
+
+Examples
+
+```text
+Duplicate rows removed
+
+Blank rows removed
+
+Encoding repaired
+
+Broken quotes repaired
+
+Whitespace normalized
+```
+
+Now software trusts
+
+the structure.
+
+---
+
+# Layer 4
+
+## Understood Data
+
+This is where AI begins.
+
+The system now understands
+
+```text
+Name
+
+Email
+
+Phone
+
+Company
+
+Status
+
+Revenue
+
+Country
+```
+
+Not because of headers.
+
+Because of meaning.
+
+---
+
+# Layer 5
+
+## Business Data
+
+Now business rules execute.
+
+Example
+
+```text
+Missing Phone
+
+↓
+
+Reject
+```
+
+Example
+
+```text
+Country Missing
+
+↓
+
+Infer
+```
+
+Example
+
+```text
+Email Exists
+
+Phone Exists
+
+↓
+
+Import
+```
+
+AI no longer decides.
+
+Business decides.
+
+---
+
+# Layer 6
+
+## Trusted Data
+
+Validation
+
+↓
+
+Repair
+
+↓
+
+Confidence
+
+↓
+
+Explainability
+
+Every record now carries evidence.
+
+---
+
+# Layer 7
+
+## Actionable Data
+
+Now CRM receives
+
+records
+
+that humans trust.
+
+---
+
+# Universal Engine Interface
+
+Every engine implements
+
+```ts
+interface Engine<Input, Output>{
+
+    readonly name:string;
+
+    readonly version:string;
+
+    execute(input:Input):Promise<Output>;
+
+}
+```
+
+This is sacred.
+
+Never violate it.
+
+---
+
+# Universal Result
+
+Every engine returns
+
+```ts
+interface EngineResult<T>{
+
+    success:boolean;
+
+    output:T;
+
+    metrics;
+
+    warnings;
+
+    duration;
+
+}
+```
+
+Every engine.
+
+No exceptions.
+
+---
+
+# The Registry
+
+Instead of
+
+```ts
+new SchemaEngine()
+```
+
+Build
+
+```text
+Engine Registry
+
+↓
+
+Schema
+
+↓
+
+Validation
+
+↓
+
+Repair
+
+↓
+
+Prompt
+
+↓
+
+Export
+```
+
+Now engines become discoverable.
+
+---
+
+# Pipeline Builder
+
+Instead of
+
+```ts
+await parser();
+
+await schema();
+
+await validator();
+```
+
+Build
+
+```ts
+pipeline
+
+.add(upload)
+
+.add(parser)
+
+.add(schema)
+
+.add(validation)
+
+.add(export)
+```
+
+Tomorrow
+
+```ts
+pipeline
+
+.add(languageDetection)
+```
+
+One line.
+
+Architecture unchanged.
+
+---
+
+# Middleware
+
+Every engine automatically receives
+
+Logger
+
+Metrics
+
+Timer
+
+Tracer
+
+Configuration
+
+Without writing code.
+
+Example
+
+```text
+execute()
+
+↓
+
+Timer Starts
+
+↓
+
+Logger Starts
+
+↓
+
+Run Engine
+
+↓
+
+Logger Ends
+
+↓
+
+Metrics Saved
+```
+
+Every engine automatically observable.
+
+---
+
+# Zero Business Logic Rule
+
+Controllers never contain
+
+```text
+if
+
+switch
+
+for
+
+while
+```
+
+Controllers
+
+only
+
+coordinate.
+
+Business logic belongs elsewhere.
+
+---
+
+# Service Rule
+
+Services
+
+never know
+
+HTTP.
+
+Never know
+
+React.
+
+Never know
+
+Express.
+
+Never know
+
+Gemini.
+
+Only business.
+
+---
+
+# Adapter Pattern
+
+Everything external
+
+becomes an adapter.
+
+```text
+Gemini Adapter
+
+PapaParse Adapter
+
+File Adapter
+
+Logger Adapter
+
+Clock Adapter
+```
+
+Tomorrow
+
+Replace Gemini.
+
+One adapter changes.
+
+Nothing else.
+
+---
+
+# The Import Graph
+
+Internally
+
+imports should not be
+
+arrays.
+
+Think graph.
+
+```text
+Dataset
+
+├── Statistics
+
+├── Schema
+
+├── Preview
+
+├── Batches
+
+│      ├── Batch 1
+
+│      ├── Batch 2
+
+│      └── Batch 3
+
+├── Validation
+
+├── Repairs
+
+└── Reports
+```
+
+Everything hangs
+
+off one object.
+
+---
+
+# Progressive Dataset Understanding
+
+The application should continuously become smarter.
+
+Example
+
+Immediately after upload
+
+```text
+Unknown Dataset
+```
+
+2 seconds
+
+```text
+Marketing Dataset
+```
+
+4 seconds
+
+```text
+Facebook Leads
+```
+
+6 seconds
+
+```text
+Likely HubSpot Export
+
+Confidence 94%
+```
+
+The application appears intelligent.
+
+---
+
+# Smart Dataset Recognition
+
+Maintain fingerprints.
+
+Example
+
+```text
+Columns
+
+↓
+
+Order
+
+↓
+
+Patterns
+
+↓
+
+Similarity
+```
+
+Recognize
+
+Salesforce
+
+HubSpot
+
+Zoho
+
+Meta
+
+Google Ads
+
+LinkedIn
+
+without AI.
+
+---
+
+# Automatic Import Strategy
+
+Instead of
+
+one pipeline
+
+generate pipelines.
+
+Example
+
+Facebook
+
+↓
+
+Pipeline A
+
+Enterprise CRM
+
+↓
+
+Pipeline B
+
+Small CSV
+
+↓
+
+Pipeline C
+
+The application chooses.
+
+Not the user.
+
+---
+
+# Reasoning Contracts
+
+Never ask AI
+
+"What is this?"
+
+Ask
+
+```text
+These are
+
+possible mappings.
+
+Choose only from
+
+this list.
+
+Return confidence.
+
+Return reasoning.
+
+Return JSON.
+
+Return nothing else.
+```
+
+Models perform dramatically better.
+
+---
+
+# Internal DSL
+
+One of the biggest differentiators.
+
+Build a tiny language.
+
+Example
+
+```text
+RULE
+
+Phone
+
+required
+
+```
+
+```text
+RULE
+
+Country
+
+infer(phone)
+
+```
+
+```text
+RULE
+
+LeadStatus
+
+enum
+```
+
+Business rules become configuration.
+
+Not code.
+
+---
+
+# Rule Engine
+
+Instead of
+
+```ts
+if(status==="...")
+```
+
+Build
+
+```text
+Rule Engine
+
+↓
+
+Evaluate Rules
+
+↓
+
+Return Violations
+```
+
+Every new rule
+
+requires
+
+zero
+
+new code.
+
+Only configuration.
+
+---
+
+# Schema DSL
+
+Example
+
+```text
+phone
+
+aliases
+
+mobile
+
+telephone
+
+contact
+
+cell
+
+priority
+
+high
+
+validator
+
+phone
+
+repair
+
+normalizePhone
+```
+
+Schema grows
+
+without touching logic.
+
+---
+
+# AI Prompt DSL
+
+Instead of
+
+writing prompts
+
+write
+
+components.
+
+```text
+System
+
++
+
+Business Rules
+
++
+
+Schema
+
++
+
+Dataset
+
++
+
+Batch
+
++
+
+Output
+
+=
+
+Prompt
+```
+
+Every part reusable.
+
+---
+
+# Functional Core
+
+The true heart of Aster should contain
+
+almost
+
+no
+
+classes.
+
+Only
+
+pure transformations.
+
+```text
+CSV
+
+↓
+
+Dataset
+
+↓
+
+Canonical Dataset
+
+↓
+
+Validated Dataset
+
+↓
+
+CRM Dataset
+```
+
+Pure.
+
+Deterministic.
+
+Predictable.
+
+---
+
+# Imperative Shell
+
+Only
+
+Upload
+
+HTTP
+
+Logging
+
+AI
+
+File System
+
+are imperative.
+
+Everything else
+
+functional.
+
+This separation dramatically reduces bugs.
+
+---
+
+# The "Delete 30%" Rule
+
+When the project is "finished"
+
+delete
+
+30%
+
+of the code.
+
+Every mature software system contains unnecessary abstractions.
+
+Assume yours does too.
+
+Refactor until every remaining file feels essential.
+
+That restraint is often what separates a polished engineering project from one that merely has many features.
+
+# Engineering Taste
+
+The biggest difference between average engineers and exceptional engineers is not intelligence.
+
+It is taste.
+
+Taste determines what gets built.
+
+Taste determines what gets deleted.
+
+Taste determines when to stop.
+
+Aster should reflect excellent engineering taste.
+
+---
+
+# The Three Levels of Software
+
+Level 1
+
+Works.
+
+---
+
+Level 2
+
+Works well.
+
+---
+
+Level 3
+
+Feels inevitable.
+
+When another engineer opens your repository they should think
+
+> "I probably would've built it this way."
+
+That is engineering elegance.
+
+---
+
+# The Simplicity Test
+
+Every file should pass this test.
+
+Can you explain its purpose in under fifteen seconds?
+
+If not
+
+Split it.
+
+---
+
+Every function.
+
+Can you explain it in one sentence?
+
+If not
+
+Split it.
+
+---
+
+Every folder.
+
+Can you describe it with one word?
+
+If not
+
+Reorganize it.
+
+---
+
+# The Fractal Rule
+
+The architecture should repeat itself.
+
+Project
+
+↓
+
+Modules
+
+↓
+
+Engines
+
+↓
+
+Services
+
+↓
+
+Functions
+
+↓
+
+Statements
+
+Everything should follow the same philosophy.
+
+Consistency scales.
+
+---
+
+# Locality Principle
+
+Everything needed to understand a feature should live together.
+
+Instead of
+
+```text
+schema/
+
+validator/
+
+prompts/
+
+constants/
+
+tests/
+```
+
+Prefer
+
+```text
+schema/
+
+    detect.ts
+
+    validator.ts
+
+    prompt.ts
+
+    constants.ts
+
+    detect.test.ts
+```
+
+One folder.
+
+One concept.
+
+Everything nearby.
+
+---
+
+# Temporal Cohesion
+
+Code that changes together
+
+should live together.
+
+Code that changes independently
+
+should not.
+
+This single principle prevents hundreds of future merge conflicts.
+
+---
+
+# The Cognitive Budget
+
+Every engineer has limited mental bandwidth.
+
+Your architecture should spend as little of it as possible.
+
+Every unnecessary abstraction costs attention.
+
+Every hidden dependency costs attention.
+
+Every giant file costs attention.
+
+Protect the reader's brain.
+
+---
+
+# The Five Minute Rule
+
+Any engineer should be able to answer these within five minutes.
+
+Where does uploading happen?
+
+Where is schema detection?
+
+Where is AI called?
+
+Where is validation?
+
+Where does exporting happen?
+
+If they cannot
+
+your architecture failed.
+
+---
+
+# Naming Philosophy
+
+Names should describe
+
+intent
+
+not implementation.
+
+Bad
+
+```text
+CSVManager
+```
+
+Good
+
+```text
+DatasetAnalyzer
+```
+
+---
+
+Bad
+
+```text
+AIHelper
+```
+
+Good
+
+```text
+SchemaReasoner
+```
+
+---
+
+Bad
+
+```text
+Utils
+```
+
+Good
+
+```text
+TokenEstimator
+```
+
+---
+
+Good names eliminate comments.
+
+---
+
+# Comments Philosophy
+
+Comments should explain
+
+**why**
+
+Never
+
+**what**
+
+Bad
+
+```ts
+// Increment index
+i++;
+```
+
+Good
+
+```ts
+// We skip the first row because it contains headers.
+```
+
+---
+
+Bad
+
+```ts
+// Parse CSV
+```
+
+Good
+
+```ts
+// PapaParse handles malformed quoting better than native parsing,
+// which significantly reduces repair work later in the pipeline.
+```
+
+Explain decisions.
+
+Not syntax.
+
+---
+
+# Logging Philosophy
+
+Every important event.
+
+Never every line.
+
+Good
+
+```text
+Upload Started
+
+Schema Detected
+
+AI Batch Completed
+
+Repair Triggered
+
+Export Generated
+```
+
+Bad
+
+```text
+Entering function
+
+Leaving function
+
+Variable X
+
+Variable Y
+```
+
+Logs should help investigations.
+
+Not create noise.
+
+---
+
+# Error Philosophy
+
+Every error should answer three questions.
+
+What happened?
+
+Why did it happen?
+
+What can the user do next?
+
+Example
+
+```text
+The uploaded CSV contains inconsistent column counts.
+
+Expected
+
+12 columns.
+
+Found
+
+15 columns on row 482.
+
+The file can still be imported after automatic repair.
+```
+
+Not
+
+```text
+Invalid CSV
+```
+
+---
+
+# Empty State Philosophy
+
+Every empty state teaches.
+
+Instead of
+
+"No data"
+
+Use
+
+"Upload a CSV to begin automatic schema detection."
+
+---
+
+# Success Philosophy
+
+Celebrate useful milestones.
+
+Not everything.
+
+Good
+
+```text
+Schema detection completed.
+
+97% confidence.
+```
+
+Better than
+
+```text
+Done.
+```
+
+---
+
+# Progress Philosophy
+
+Progress should represent
+
+real work.
+
+Not fake timers.
+
+Every progress update corresponds to an actual completed stage.
+
+Users subconsciously notice honesty.
+
+---
+
+# Feature Discovery
+
+Every feature should reveal itself naturally.
+
+Hover explains.
+
+Context menus teach.
+
+Smart defaults guide.
+
+Documentation becomes optional.
+
+---
+
+# Keyboard Navigation
+
+Power users never touch the mouse unnecessarily.
+
+Essential shortcuts
+
+```text
+/
+
+Search
+
+Ctrl + U
+
+Upload
+
+Ctrl + Enter
+
+Import
+
+Ctrl + S
+
+Export
+
+Esc
+
+Close Dialog
+
+Tab
+
+Move Focus
+```
+
+---
+
+# Responsive Philosophy
+
+Do not shrink desktop.
+
+Redesign mobile.
+
+Desktop
+
+Multiple panels.
+
+Tablet
+
+Collapsible panels.
+
+Phone
+
+Single column workflow.
+
+Different experiences.
+
+Same product.
+
+---
+
+# The Rule of Three
+
+Do not abstract before three uses.
+
+First use
+
+Write it.
+
+Second use
+
+Copy it.
+
+Third use
+
+Abstract it.
+
+Premature abstraction creates complexity.
+
+---
+
+# The Rule of One
+
+If one module owns something
+
+No other module should know how it works.
+
+Parser owns parsing.
+
+Validator owns validation.
+
+Exporter owns exporting.
+
+No leakage.
+
+---
+
+# The "Future You" Test
+
+Imagine it is 2031.
+
+You open this repository after not seeing it for five years.
+
+Would you silently thank your past self?
+
+Or spend two days understanding it?
+
+Design for the first outcome.
+
+---
+
+# Final Vision
+
+Aster should leave reviewers with three lasting impressions.
+
+**First**
+
+This engineer understands software architecture, not just frameworks.
+
+**Second**
+
+This engineer knows exactly where deterministic software ends and where AI should begin.
+
+**Third**
+
+This codebase feels calm.
+
+Nothing is fighting for attention.
+
+Nothing is over engineered.
+
+Nothing is missing.
+
+Every module has a purpose.
+
+Every interface has a reason.
+
+Every feature supports the product.
+
+When the reviewer closes the repository, they should not remember the animations or the UI components.
+
+They should remember that this was one of the rare projects where the engineering itself was the product.
+
+# The Last 10 Percent
+
+Most hackathon projects stop when the features are finished.
+
+Professional software starts there.
+
+The last ten percent determines whether reviewers think
+
+> "Nice project."
+
+or
+
+> "This person thinks like an engineer."
+
+---
+
+# Invisible Quality Layer
+
+Users should never notice these.
+
+Reviewers always do.
+
+---
+
+## Graceful Degradation
+
+Every feature should have a fallback.
+
+Example
+
+Gemini fails.
+
+↓
+
+Use cached schema.
+
+↓
+
+Continue processing.
+
+↓
+
+Only unresolved fields wait for AI.
+
+Never stop the pipeline because one dependency failed.
+
+---
+
+## Offline Awareness
+
+If the network disconnects
+
+Don't lose work.
+
+Pause.
+
+Resume automatically.
+
+The user should never restart the import.
+
+---
+
+## Crash Recovery
+
+Every stage stores checkpoints.
+
+```text
+Upload
+
+✓
+
+Analysis
+
+✓
+
+Schema
+
+✓
+
+Batch 1
+
+✓
+
+Batch 2
+
+✓
+
+Batch 3
+
+×
+
+Resume from Batch 3
+```
+
+Not
+
+Start again.
+
+---
+
+## Time Travel Debugging
+
+Every important state becomes inspectable.
+
+Imagine clicking
+
+Batch 4
+
+and seeing
+
+Dataset
+
+↓
+
+Prompt
+
+↓
+
+Response
+
+↓
+
+Validation
+
+↓
+
+Repair
+
+↓
+
+Final Output
+
+One screen.
+
+Amazing debugging experience.
+
+---
+
+# Engineering Metrics Dashboard
+
+Not for users.
+
+For developers.
+
+```
+Current Memory
+
+Current CPU
+
+Current Queue
+
+Average AI Latency
+
+Average Batch Size
+
+Current Import
+
+Token Usage
+
+Prompt Version
+
+Repair Success
+
+Validation Success
+```
+
+One hidden page.
+
+---
+
+# Every Component Has a Contract
+
+Example
+
+Upload Zone
+
+Guarantees
+
+Receives files.
+
+Validates files.
+
+Never parses files.
+
+---
+
+Schema Table
+
+Guarantees
+
+Displays mappings.
+
+Allows override.
+
+Never validates mappings.
+
+---
+
+Import Engine
+
+Guarantees
+
+Processes batches.
+
+Never renders UI.
+
+Contracts make maintenance effortless.
+
+---
+
+# Build Like Stripe
+
+Stripe has one philosophy.
+
+Nothing is accidental.
+
+Spacing.
+
+Animation.
+
+Typography.
+
+Loading.
+
+Errors.
+
+Everything intentional.
+
+Your product should feel
+
+inevitable.
+
+---
+
+# Animation Philosophy
+
+Animation exists
+
+only
+
+to explain change.
+
+Never because it looks cool.
+
+Examples
+
+Card expands
+
+because
+
+details appear.
+
+Progress bar
+
+moves
+
+because
+
+processing happened.
+
+Table fades
+
+because
+
+new data arrived.
+
+No decorative animation.
+
+---
+
+# Performance Budget
+
+Before writing code define budgets.
+
+Maximum First Load
+
+300 KB JavaScript
+
+Maximum Initial Render
+
+1 second
+
+Maximum Upload Delay
+
+100 milliseconds
+
+Maximum Batch Latency
+
+5 seconds
+
+Maximum Memory
+
+150 MB
+
+Design around limits.
+
+Not around optimism.
+
+---
+
+# Engineering KPIs
+
+Track these internally.
+
+```text
+Cold Start
+
+Warm Start
+
+Largest Dataset
+
+Smallest Dataset
+
+Rows Per Second
+
+Average Confidence
+
+Average Repairs
+
+Average AI Calls
+
+Average Cost
+
+Average Processing Time
+```
+
+Data beats intuition.
+
+---
+
+# Smart Defaults
+
+Users shouldn't configure.
+
+The software should.
+
+Bad
+
+```
+Choose Batch Size
+
+Choose Delimiter
+
+Choose Encoding
+
+Choose Prompt
+```
+
+Good
+
+```
+Detected automatically.
+```
+
+---
+
+# Zero Decision UX
+
+The user should make only decisions that require human judgment.
+
+Everything else
+
+software decides.
+
+---
+
+# Delight Moments
+
+One small surprise.
+
+Example
+
+After upload
+
+```
+Detected
+
+HubSpot Export
+
+97% confidence
+```
+
+or
+
+```
+Detected
+
+Facebook Lead Form
+
+Auto configuring import...
+```
+
+Feels intelligent.
+
+---
+
+# Engineering Narrative
+
+Reviewers read repositories like stories.
+
+Your repository should naturally answer
+
+What problem exists?
+
+↓
+
+Why current solutions fail?
+
+↓
+
+How this architecture solves it?
+
+↓
+
+Why each decision exists?
+
+↓
+
+How future engineers extend it?
+
+That story should emerge without reading every file.
+
+---
+
+# The README Opens Like This
+
+Not
+
+> AI CSV Importer
+
+Instead
+
+> Most AI powered CSV importers treat language models as the system. Aster treats them as one component inside a deterministic data processing pipeline. Every stage before and after the model is designed to reduce uncertainty, validate reasoning, and produce explainable CRM ready data.
+
+Immediately communicates maturity.
+
+---
+
+# Architecture Philosophy Page
+
+Create
+
+```
+docs/architecture.md
+```
+
+Explain
+
+Core principles.
+
+Layer boundaries.
+
+Data flow.
+
+AI philosophy.
+
+Failure handling.
+
+Future extensibility.
+
+This document alone can differentiate your project.
+
+---
+
+# ADRs
+
+Every major decision becomes an Architecture Decision Record.
+
+Examples
+
+```
+ADR 001
+
+Why Gemini?
+
+ADR 002
+
+Why streaming?
+
+ADR 003
+
+Why adaptive batching?
+
+ADR 004
+
+Why deterministic validation?
+
+ADR 005
+
+Why confidence scoring?
+```
+
+Large companies use ADRs.
+
+Reviewers notice.
+
+---
+
+# Production Checklist
+
+Before submission ask
+
+Can another engineer deploy this?
+
+Can another engineer extend this?
+
+Can another engineer debug this?
+
+Can another engineer replace Gemini?
+
+Can another engineer replace React?
+
+Can another engineer understand every folder?
+
+If every answer is yes
+
+You're close.
+
+---
+
+# The 2031 Test
+
+Imagine this project is open sourced.
+
+Five years later
+
+Someone you've never met opens an issue.
+
+They say
+
+> I added Salesforce imports in two hours. The architecture made it surprisingly easy.
+
+That single sentence is a better compliment than
+
+> Nice UI.
+
+---
+
+# The 2050 Test
+
+Technologies will change.
+
+Gemini disappears.
+
+Claude disappears.
+
+React changes.
+
+Next.js changes.
+
+CSV becomes Parquet.
+
+None of that should invalidate the architecture.
+
+Because the architecture is built around timeless ideas.
+
+Information flows.
+
+Contracts.
+
+Boundaries.
+
+Deterministic systems.
+
+Reasoning.
+
+Validation.
+
+Trust.
+
+Those principles were correct in 1990.
+
+They are correct today.
+
+They will still be correct decades from now.
+
+That is what makes software feel like it came from the future.
