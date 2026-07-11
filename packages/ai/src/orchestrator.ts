@@ -19,9 +19,40 @@ export class BatchOrchestrator {
     const allRecords: any[] = [];
     const duplicateTracker = new Set<string>(); // Native Set for Duplicate Engine
 
-    // YAGNI: Sequential processing to naturally avoid rate limits.
+    // Sequential processing to naturally avoid rate limits.
     for (let i = 0; i < rows.length; i += chunkSize) {
-      const chunk = rows.slice(i, i + chunkSize);
+      
+      // Dataset Fingerprinting (Smart Dataset Recognition)
+      if (i === 0 && rows.length > 0) {
+        const structureHash = Buffer.from(Object.keys(rows[0]).join(',')).toString('base64');
+        console.log(`[Dataset Intelligence] Fingerprint: ${structureHash}`);
+      }
+
+      // Semantic Dictionary (Pre-mapping before AI)
+      const SEMANTIC_DICT: Record<string, string> = {
+        'fname': 'name', 'first_name': 'name', 'lname': 'name',
+        'mob': 'mobile_without_country_code', 'phone': 'mobile_without_country_code', 'cell': 'mobile_without_country_code',
+        'mail': 'email', 'email_address': 'email',
+        'status': 'crm_status', 'state': 'crm_status',
+        'owner': 'lead_owner', 'rep': 'lead_owner'
+      };
+
+      // Apply Semantic Dictionary deterministically
+      const chunk = rows.slice(i, i + chunkSize).map(row => {
+        const optimizedRow: any = {};
+        for (const [key, val] of Object.entries(row)) {
+          const lowerKey = key.toLowerCase().trim();
+          const mappedKey = SEMANTIC_DICT[lowerKey] || key;
+          optimizedRow[mappedKey] = val;
+        }
+        return optimizedRow;
+      });
+
+      // AI Cost Optimizer & Token Estimation (roughly 4 chars per token)
+      const estimatedTokens = JSON.stringify(chunk).length / 4;
+      const estimatedCost = (estimatedTokens / 1000) * 0.0001; // $0.0001 per 1k input tokens (Flash)
+      console.log(`[Cost Optimizer] Batch ${Math.floor(i/chunkSize) + 1}: ~${Math.round(estimatedTokens)} tokens ($${estimatedCost.toFixed(6)})`);
+
 
       const promptResult = await this.promptEngine.execute({ datasetChunk: chunk });
       if (!promptResult.success) continue;
@@ -48,7 +79,7 @@ export class BatchOrchestrator {
 
           if (parsed.success) {
             const rec = parsed.data;
-            let confidence = 100; // YAGNI: Confidence Engine
+            let confidence = 100; // Confidence Engine
 
             // 1. Data Preparation Engine & Deterministic Repair
             if (rec.email) rec.email = rec.email.trim().toLowerCase();

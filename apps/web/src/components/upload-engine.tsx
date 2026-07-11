@@ -13,6 +13,24 @@ export function UploadEngine() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processResult, setProcessResult] = useState<any>(null);
   const [processingProgress, setProcessingProgress] = useState<number>(0);
+  
+  // YAGNI: State Machine for ImportSession
+  const [importState, setImportState] = useState<'CREATED' | 'UPLOADING' | 'ANALYZING' | 'SCHEMA_READY' | 'PROCESSING' | 'VALIDATING' | 'REPAIRING' | 'COMPLETED' | 'FAILED'>('CREATED');
+  
+  // Developer Inspector State
+  const [showInspector, setShowInspector] = useState(false);
+
+  // Hidden Keyboard Shortcut (Ctrl+Shift+D)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        setShowInspector(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
 
   const downloadCSV = () => {
     if (!processResult || processResult.length === 0) return;
@@ -42,42 +60,52 @@ export function UploadEngine() {
     
     try {
       const formData = new FormData();
-      formData.append('file', activeFile);
-      
-      const res = await fetch('/api/process', {
+      const response = await fetch('/api/process', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: parsedData }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      
-      if (reader) {
-        let done = false;
-        let buffer = '';
-        while (!done) {
-          const { value, done: readerDone } = await reader.read();
-          done = readerDone;
-          if (value) {
-            buffer += decoder.decode(value, { stream: !done });
-            const parts = buffer.split('\n\n');
-            buffer = parts.pop() || ''; // Keep the incomplete chunk in the buffer
-            
-            for (const line of parts) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.substring(6));
-                  if (data.type === 'progress') {
-                    setProcessingProgress(Math.round((data.processed / data.total) * 100));
-                  } else if (data.type === 'complete') {
-                    setProcessResult(data.data);
-                  } else if (data.type === 'error') {
-                    console.error("AI stream error:", data.error);
-                  }
-                } catch (e) {
-                  console.error("Failed to parse chunk line:", line, e);
-                }
+      setImportState('VALIDATING');
+
+      // Native SSE Event Stream reading using standard Fetch API
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder('utf-8');
+
+      if (!reader) throw new Error("No reader available");
+
+      let finalResult = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.replace('data: ', '').trim();
+            if (!dataStr) continue;
+
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.type === 'progress') {
+                setProcessingProgress(Math.round((data.processed / data.total) * 100));
+              } else if (data.type === 'complete') {
+                setImportState('REPAIRING');
+                finalResult = data.result;
+                setProcessResult(data.result);
+              } else if (data.type === 'error') {
+                setImportState('FAILED');
+                throw new Error(data.message);
               }
+            } catch (e) {
+              console.error("Error parsing SSE JSON:", e);
             }
           }
         }
@@ -90,15 +118,34 @@ export function UploadEngine() {
   };
 
   return (
-    <>
+    <div className="w-full relative">
+      {/* Developer Inspector Panel */}
+      {showInspector && (
+        <div className="fixed top-4 right-4 z-[100] w-80 bg-zinc-950 text-emerald-400 font-mono text-xs p-4 rounded-lg shadow-2xl border border-zinc-800 animate-in slide-in-from-right-8">
+          <div className="flex items-center gap-2 mb-4 border-b border-zinc-800 pb-2">
+            <span className="font-bold">DEVELOPER INSPECTOR</span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between"><span>State:</span><span className="text-white">{importState}</span></div>
+            <div className="flex justify-between"><span>Rows:</span><span className="text-white">{parsedData?.length || 0}</span></div>
+            <div className="flex justify-between"><span>Memory:</span><span className="text-white">~{(performance as any)?.memory?.usedJSHeapSize ? Math.round((performance as any).memory.usedJSHeapSize / 1048576) + ' MB' : 'N/A'}</span></div>
+            {processResult && (
+               <div className="flex justify-between"><span>Processed:</span><span className="text-white">{processResult.length}</span></div>
+            )}
+          </div>
+          <div className="mt-4 text-zinc-500 text-[10px]">Press Ctrl+Shift+D to close</div>
+        </div>
+      )}
+
+      {/* Upload Zone */}
       <DatasetUploader onParseSuccess={(data, file) => {
         setParsedData(data);
         if (file) setActiveFile(file);
       }} />
       
       {parsedData && (
-        <div className="fixed inset-0 z-[40] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-8 animate-in fade-in duration-300">
-          <div className="w-full max-w-6xl max-h-[80vh] bg-card border border-border shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[40] flex items-center justify-center bg-background p-4 sm:p-8 animate-in fade-in duration-300">
+          <div className="w-full max-w-6xl max-h-[80vh] bg-card border border-border shadow-sm rounded-xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="p-4 sm:p-6 flex-1 overflow-hidden flex flex-col">
               <PreviewTable data={parsedData} onClose={() => setParsedData(null)} />
             </div>
@@ -109,7 +156,7 @@ export function UploadEngine() {
       {/* The Premium Slide-to-Upload Footer */}
       {parsedData && !processResult && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] animate-in slide-in-from-bottom-8 duration-500">
-          <div className="bg-background/95 backdrop-blur-xl shadow-2xl border border-border rounded-full p-2 pr-6 flex items-center gap-4 relative overflow-hidden">
+          <div className="bg-card shadow-sm border border-border rounded-full p-2 pr-6 flex items-center gap-4 relative overflow-hidden">
             {/* Progress Background Fill */}
             {isProcessing && (
               <div 
@@ -133,11 +180,11 @@ export function UploadEngine() {
 
       {/* Render the final AI output Dashboard */}
       {processResult && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/95 backdrop-blur-md p-4 sm:p-8 animate-in fade-in duration-300">
-          <div className="w-full h-full max-w-7xl bg-card border border-border shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background p-4 sm:p-8 animate-in fade-in duration-300">
+          <div className="w-full h-full max-w-7xl bg-card border border-border shadow-sm rounded-xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
             
             {/* Header Section */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-5 shrink-0 border-b border-border bg-background">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 shrink-0 border-b border-border bg-card">
               <div>
                 <h3 className="text-xl font-semibold tracking-tight flex items-center gap-3">
                   AI Processed Results
@@ -207,6 +254,6 @@ export function UploadEngine() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
