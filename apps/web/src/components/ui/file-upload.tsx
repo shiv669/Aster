@@ -62,7 +62,7 @@ export type FileUploadOptions = {
   maxSize?: number // in bytes
   accept?: string
   multiple?: boolean // Defaults to false
-  initialFiles?: FileMetadata[]
+  initialFiles?: (File | FileMetadata)[]
   onFilesChange?: (files: FileWithPreview[]) => void // Callback when files change
   onFilesAdded?: (addedFiles: FileWithPreview[]) => void // Callback when new files are added
 }
@@ -107,8 +107,8 @@ export const useFileUpload = (
   const [state, setState] = useState<FileUploadState>({
     files: initialFiles.map((file) => ({
       file,
-      id: file.id,
-      preview: file.url,
+      id: 'id' in file ? file.id : Math.random().toString(36).substring(7),
+      preview: 'url' in file ? file.url : (file instanceof File ? URL.createObjectURL(file) : undefined),
     })),
     isDragging: false,
     errors: [],
@@ -534,9 +534,13 @@ const getFileIcon = (entry: UploadEntry) => {
 
 // ---------- Component ----------
 export default function DatasetUploader({
-  onParseSuccess
+  onParseSuccess,
+  initialFiles = [],
+  hideUploadZone = false
 }: {
   onParseSuccess?: (data: any, file?: File) => void
+  initialFiles?: File[]
+  hideUploadZone?: boolean
 }) {
   // Tunables
   const maxSize = 50 * 1024 * 1024 // 50MB
@@ -581,7 +585,7 @@ export default function DatasetUploader({
           });
           const json = await res.json();
           if (json.success) {
-            onParseSuccess(json.data);
+            onParseSuccess(json.data, file);
           }
         } catch (err) {
           console.error("Upload failed", err);
@@ -797,42 +801,44 @@ export default function DatasetUploader({
         </div>
       </div>
 
-      {/* -- Drop area (always shown) -- */}
-      <div
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        data-dragging={isDragging || undefined}
-        className="border-input data-[dragging=true]:bg-accent/50 has-[input:focus]:border-ring has-[input:focus]:ring-ring/50 rounded-xl border border-dashed p-3 transition-colors has-[input:focus]:ring-[3px]"
-        aria-label="Drop files here or use the select button to upload"
-      >
-        <input
-          {...getInputProps({
-            // You can filter accepted types here:
-            // accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt",
-            "aria-label": "Upload files",
-          })}
-          className="sr-only"
-        />
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="bg-background me-1 flex size-9 shrink-0 items-center justify-center rounded-full border">
-              <FileIcon className="size-4 opacity-60" aria-hidden="true" />
+      {/* -- Drop area -- */}
+      {!hideUploadZone && (
+        <div
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          data-dragging={isDragging || undefined}
+          className="border-input data-[dragging=true]:bg-accent/50 has-[input:focus]:border-ring has-[input:focus]:ring-ring/50 rounded-xl border border-dashed p-3 transition-colors has-[input:focus]:ring-[3px]"
+          aria-label="Drop files here or use the select button to upload"
+        >
+          <input
+            {...getInputProps({
+              // You can filter accepted types here:
+              // accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt",
+              "aria-label": "Upload files",
+            })}
+            className="sr-only"
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="bg-background me-1 flex size-9 shrink-0 items-center justify-center rounded-full border">
+                <FileIcon className="size-4 opacity-60" aria-hidden="true" />
+              </div>
+              <div className="text-xs">
+                <p className="font-medium">Drop files to upload</p>
+                <p className="text-muted-foreground">
+                  Up to {maxFiles} files · {formatBytes(maxSize)} per file
+                </p>
+              </div>
             </div>
-            <div className="text-xs">
-              <p className="font-medium">Drop files to upload</p>
-              <p className="text-muted-foreground">
-                Up to {maxFiles} files · {formatBytes(maxSize)} per file
-              </p>
-            </div>
+            <Button variant="outline" size="sm" onClick={openFileDialog}>
+              <UploadIcon className="-ms-1 size-3.5 opacity-60" aria-hidden="true" />
+              Select files
+            </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={openFileDialog}>
-            <UploadIcon className="-ms-1 size-3.5 opacity-60" aria-hidden="true" />
-            Select files
-          </Button>
         </div>
-      </div>
+      )}
 
       {/* -- When we have files -- */}
       {filtered.length > 0 ? (

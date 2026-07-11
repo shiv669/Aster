@@ -14,6 +14,10 @@ export function UploadEngine() {
   const [processResult, setProcessResult] = useState<any>(null);
   const [processingProgress, setProcessingProgress] = useState<number>(0);
   
+  // Storage for processed files
+  const [cleanedFileObjects, setCleanedFileObjects] = useState<File[]>([]);
+  const [activeTab, setActiveTab] = useState<'raw'|'cleaned'>('raw');
+  
   // YAGNI: State Machine for ImportSession
   const [importState, setImportState] = useState<'CREATED' | 'UPLOADING' | 'ANALYZING' | 'SCHEMA_READY' | 'PROCESSING' | 'VALIDATING' | 'REPAIRING' | 'COMPLETED' | 'FAILED'>('CREATED');
   
@@ -27,8 +31,20 @@ export function UploadEngine() {
         setShowInspector(prev => !prev);
       }
     };
+    
+    // Prevent browser from downloading files when dropped outside the dropzone
+    const handleDragOver = (e: DragEvent) => e.preventDefault();
+    const handleDrop = (e: DragEvent) => e.preventDefault();
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('drop', handleDrop);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('drop', handleDrop);
+    };
   }, []);
 
 
@@ -59,11 +75,11 @@ export function UploadEngine() {
     console.log("Triggering AI processing for dataset...");
     
     try {
-      const formData = new FormData();
-      const response = await fetch('/api/process', {
+      const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
+      const response = await fetch(`${API_BASE}/api/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: parsedData }),
+        body: JSON.stringify({ rows: parsedData?.records || [] }),
       });
 
       if (!response.ok) {
@@ -72,20 +88,21 @@ export function UploadEngine() {
       
       setImportState('VALIDATING');
 
-      // Native SSE Event Stream reading using standard Fetch API
       const reader = response.body?.getReader();
       const decoder = new TextDecoder('utf-8');
 
       if (!reader) throw new Error("No reader available");
 
       let finalResult = null;
+      let buffer = '';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
@@ -112,6 +129,7 @@ export function UploadEngine() {
       }
     } catch (err) {
       console.error("Failed to process dataset", err);
+      throw err;
     } finally {
       setIsProcessing(false);
     }
@@ -127,7 +145,7 @@ export function UploadEngine() {
           </div>
           <div className="space-y-2">
             <div className="flex justify-between"><span>State:</span><span className="text-white">{importState}</span></div>
-            <div className="flex justify-between"><span>Rows:</span><span className="text-white">{parsedData?.length || 0}</span></div>
+            <div className="flex justify-between"><span>Rows:</span><span className="text-white">{parsedData?.records?.length || 0}</span></div>
             <div className="flex justify-between"><span>Memory:</span><span className="text-white">~{(performance as any)?.memory?.usedJSHeapSize ? Math.round((performance as any).memory.usedJSHeapSize / 1048576) + ' MB' : 'N/A'}</span></div>
             {processResult && (
                <div className="flex justify-between"><span>Processed:</span><span className="text-white">{processResult.length}</span></div>
@@ -137,11 +155,40 @@ export function UploadEngine() {
         </div>
       )}
 
-      {/* Upload Zone */}
-      <DatasetUploader onParseSuccess={(data, file) => {
-        setParsedData(data);
-        if (file) setActiveFile(file);
-      }} />
+      {/* Tab Slider for switching contexts */}
+      <div className="flex justify-center mb-8">
+        <div className="bg-muted/50 p-1 rounded-xl inline-flex shadow-sm border border-border">
+          <button 
+            onClick={() => setActiveTab('raw')}
+            className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'raw' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Uploaded Files
+          </button>
+          <button 
+            onClick={() => setActiveTab('cleaned')}
+            className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'cleaned' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Cleaned Files
+          </button>
+        </div>
+      </div>
+
+      <div className={activeTab === 'raw' ? 'block' : 'hidden'}>
+        <DatasetUploader onParseSuccess={(data, file) => {
+          setParsedData(data);
+          if (file) setActiveFile(file);
+        }} />
+      </div>
+
+      <div className={activeTab === 'cleaned' ? 'block' : 'hidden'}>
+        <DatasetUploader 
+          key={cleanedFileObjects.length} 
+          initialFiles={cleanedFileObjects} 
+          hideUploadZone={true} 
+        />
+      </div>
+
+
       
       {parsedData && (
         <div className="fixed inset-0 z-[40] flex items-center justify-center bg-background p-4 sm:p-8 animate-in fade-in duration-300">
@@ -153,24 +200,16 @@ export function UploadEngine() {
         </div>
       )}
 
-      {/* The Premium Slide-to-Upload Footer */}
+      {/* Slide-to-Upload Footer */}
       {parsedData && !processResult && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] animate-in slide-in-from-bottom-8 duration-500">
           <div className="bg-card shadow-sm border border-border rounded-full p-2 pr-6 flex items-center gap-4 relative overflow-hidden">
-            {/* Progress Background Fill */}
-            {isProcessing && (
-              <div 
-                className="absolute inset-0 bg-primary/10 transition-all duration-300 ease-out z-0" 
-                style={{ width: `${processingProgress}%` }} 
-              />
-            )}
-            
             <div className="relative z-10 flex items-center gap-4">
               <SlideButton onSlide={handleSlide} />
               <span className="text-sm font-medium text-muted-foreground pr-2 min-w-[200px]">
                 {isProcessing 
                   ? `Processing chunk... ${processingProgress}%` 
-                  : "Slide to run Intelligence Engine"
+                  : "Slide to process dataset"
                 }
               </span>
             </div>
@@ -187,16 +226,16 @@ export function UploadEngine() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 shrink-0 border-b border-border bg-card">
               <div>
                 <h3 className="text-xl font-semibold tracking-tight flex items-center gap-3">
-                  AI Processed Results
+                  Processed Results
                   <span className="bg-emerald-500/10 text-emerald-500 text-xs px-2.5 py-1 rounded-md font-medium border border-emerald-500/20">
                     {processResult.length} Imported
                   </span>
                   <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-md font-medium border border-amber-500/20">
-                    {parsedData?.length ? parsedData.length - processResult.length : 0} Skipped
+                    {parsedData?.records?.length ? parsedData.records.length - processResult.length : 0} Skipped
                   </span>
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1.5">
-                  The Intelligence Engine successfully extracted {processResult.length} CRM records. {parsedData?.length ? parsedData.length - processResult.length : 0} invalid records were skipped.
+                  Successfully extracted {processResult.length} CRM records. {parsedData?.records?.length ? parsedData.records.length - processResult.length : 0} invalid records were skipped.
                 </p>
               </div>
               
@@ -209,7 +248,23 @@ export function UploadEngine() {
                   Export CSV
                 </button>
                 <button 
-                  onClick={() => { setProcessResult(null); setParsedData(null); setActiveFile(null); }}
+                  onClick={() => { 
+                    if (processResult && activeFile) {
+                      const headers = Object.keys(processResult[0] || {});
+                      const csvContent = [
+                        headers.join(','),
+                        ...processResult.map((row: any) => 
+                          headers.map(field => JSON.stringify(row[field] || "")).join(',')
+                        )
+                      ].join('\n');
+                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                      const file = new File([blob], `cleaned_${activeFile.name}`, { type: 'text/csv' });
+                      setCleanedFileObjects(prev => [...prev, file]);
+                    }
+                    setProcessResult(null); 
+                    setParsedData(null); 
+                    setActiveFile(null); 
+                  }}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-muted text-muted-foreground text-xs font-medium rounded-md hover:bg-muted/80 transition-colors border border-border"
                 >
                   <RefreshCwIcon className="w-3.5 h-3.5" />

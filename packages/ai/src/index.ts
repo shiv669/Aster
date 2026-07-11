@@ -24,7 +24,7 @@ export class IntelligenceEngine implements Engine<IntelligenceInput, CRMRecord[]
           { role: "system", content: input.systemPrompt },
           { role: "user", content: input.userPrompt }
         ],
-        model: "llama-3.3-70b-versatile", // High capacity, highly deterministic modern model
+        model: "meta-llama/llama-4-scout-17b-16e-instruct",
         temperature: 0.0,
         max_tokens: 4000,
         tools: [{
@@ -70,7 +70,7 @@ export class IntelligenceEngine implements Engine<IntelligenceInput, CRMRecord[]
       if (!toolCall || !toolCall.function || !toolCall.function.arguments) {
         throw new Error("Model failed to call the extraction tool");
       }
-      
+
       const parsed = JSON.parse(toolCall.function.arguments);
       const outputRecords = parsed.records || [];
 

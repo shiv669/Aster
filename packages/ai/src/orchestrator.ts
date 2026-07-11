@@ -24,8 +24,7 @@ export class BatchOrchestrator {
       
       // Dataset Fingerprinting (Smart Dataset Recognition)
       if (i === 0 && rows.length > 0) {
-        const structureHash = Buffer.from(Object.keys(rows[0]).join(',')).toString('base64');
-        console.log(`[Dataset Intelligence] Fingerprint: ${structureHash}`);
+        const headers = Object.keys(rows[0] || {}).join(',');
       }
 
       // Semantic Dictionary (Pre-mapping before AI)
@@ -50,8 +49,7 @@ export class BatchOrchestrator {
 
       // AI Cost Optimizer & Token Estimation (roughly 4 chars per token)
       const estimatedTokens = JSON.stringify(chunk).length / 4;
-      const estimatedCost = (estimatedTokens / 1000) * 0.0001; // $0.0001 per 1k input tokens (Flash)
-      console.log(`[Cost Optimizer] Batch ${Math.floor(i/chunkSize) + 1}: ~${Math.round(estimatedTokens)} tokens ($${estimatedCost.toFixed(6)})`);
+      const estimatedCost = (estimatedTokens / 1000) * 0.0001;
 
 
       const promptResult = await this.promptEngine.execute({ datasetChunk: chunk });
@@ -92,7 +90,6 @@ export class BatchOrchestrator {
 
             // 2. Critical Business Rule Enforcer
             if (!rec.email && !rec.mobile_without_country_code) {
-              console.warn("Milestone 4: Dropped record - missing both email and mobile.");
               continue; // Skip this record
             }
 
@@ -112,11 +109,12 @@ export class BatchOrchestrator {
 
             allRecords.push({ ...rec, aster_confidence: `${Math.max(0, confidence)}%` });
           } else {
-            console.warn("Milestone 4: Dropped record - Zod schema validation failed.", parsed.error.issues);
+            // Drop invalid records silently
           }
         }
       } else {
         console.error(`AI Batch Failed for chunk ${i}:`, aiResult?.warnings);
+        throw new Error(aiResult?.warnings?.[0] || "AI Batch processing failed entirely.");
       }
 
       if (onProgress) {

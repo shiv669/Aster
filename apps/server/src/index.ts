@@ -29,7 +29,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // In-memory Multer for Upload Engine
 const upload = multer({ 
@@ -72,8 +72,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         delimiter: parseResult.output.delimiter,
         headers: parseResult.output.headers
       },
-      // In a real app we wouldn't send all rows back if it's huge, but for preview we slice it.
-      previewRows: parseResult.output.records.slice(0, 100) 
+      records: parseResult.output.records 
     }
   });
 });
@@ -81,19 +80,14 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 const aiOrchestrator = new BatchOrchestrator(process.env.GROQ_API_KEY || '');
 
 // Process endpoint (runs the full AI transformation)
-app.post('/api/process', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ success: false, error: 'No file uploaded' });
-  }
-
-  const parseResult = await parserEngine.execute({ buffer: req.file.buffer });
-  if (!parseResult.success) {
-    return res.status(500).json({ success: false, error: 'Parsing failed' });
+app.post('/api/process', async (req, res) => {
+  if (!req.body || !req.body.rows || !Array.isArray(req.body.rows)) {
+    return res.status(400).json({ success: false, error: 'No rows provided in JSON body' });
   }
 
   // YAGNI: Slice to 30 rows for real-time demo speed and rate-limit avoidance
-  const rowsToProcess = parseResult.output.records.slice(0, 30);
-  console.log(`API Process: Parsed ${parseResult.output.records.length} rows. Sending ${rowsToProcess.length} rows to AI.`);
+  const rowsToProcess = req.body.rows;
+  console.log(`API Process: Received ${req.body.rows.length} rows. Sending ${rowsToProcess.length} rows to AI.`);
   
   // YAGNI: Native Server-Sent Events (SSE) without Socket.io bloat
   res.setHeader('Content-Type', 'text/event-stream');
@@ -105,11 +99,11 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
     const crmRecords = await aiOrchestrator.processDataset(rowsToProcess, 10, (processed, total) => {
       res.write(`data: ${JSON.stringify({ type: 'progress', processed, total })}\n\n`);
     });
-    res.write(`data: ${JSON.stringify({ type: 'complete', data: crmRecords })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'complete', result: crmRecords })}\n\n`);
     res.end();
   } catch (error: any) {
     console.error("AI Processing Error:", error);
-    res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
     res.end();
   }
 });

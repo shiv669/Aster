@@ -2,10 +2,10 @@ import React from 'react';
 import { XIcon } from 'lucide-react';
 
 export function PreviewTable({ data, onClose }: { data: any, onClose?: () => void }) {
-  if (!data || !data.metadata || !data.previewRows) return null;
+  if (!data || !data.metadata || !data.records) return null;
 
   const { headers, rowCount } = data.metadata;
-  const rows = data.previewRows;
+  const rows = data.records;
 
   return (
     <div className="w-full h-full flex flex-col space-y-4 overflow-hidden">
