@@ -5,12 +5,34 @@ import DatasetUploader from "@/components/ui/file-upload";
 import { PreviewTable } from "@/components/preview-table";
 import { SlideButton } from "@/components/ui/slide-button";
 
+import { DownloadIcon, RefreshCwIcon } from "lucide-react";
+
 export function UploadEngine() {
   const [parsedData, setParsedData] = useState<any>(null);
   const [activeFile, setActiveFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processResult, setProcessResult] = useState<any>(null);
   const [processingProgress, setProcessingProgress] = useState<number>(0);
+
+  const downloadCSV = () => {
+    if (!processResult || processResult.length === 0) return;
+    const headers = Object.keys(processResult[0]);
+    const csvContent = [
+      headers.join(','),
+      ...processResult.map((row: any) => 
+        headers.map(field => JSON.stringify(row[field] || "")).join(',')
+      )
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `aster_cleaned_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleSlide = async () => {
     if (!activeFile) return;
@@ -109,21 +131,82 @@ export function UploadEngine() {
         </div>
       )}
 
-      {/* Render the final AI output */}
+      {/* Render the final AI output Dashboard */}
       {processResult && (
-        <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-background p-4 sm:p-8 animate-in fade-in duration-300">
-          <div className="w-full max-w-4xl text-center space-y-4">
-            <h2 className="text-3xl font-bold tracking-tight">AI Transformation Complete</h2>
-            <p className="text-muted-foreground">The Intelligence Engine has structured your dataset.</p>
-            <div className="bg-card text-left border rounded-xl overflow-auto h-[60vh] p-4 text-xs font-mono shadow-inner">
-              <pre>{JSON.stringify(processResult, null, 2)}</pre>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/95 backdrop-blur-md p-4 sm:p-8 animate-in fade-in duration-300">
+          <div className="w-full h-full max-w-7xl bg-card border border-border shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+            
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 shrink-0 border-b border-border bg-muted/20">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-semibold tracking-tight flex items-center gap-3">
+                  AI Transformation Complete
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                    {processResult.length} Records
+                  </span>
+                  {parsedData?.metadata?.rowCount && (parsedData.metadata.rowCount > processResult.length) && (
+                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/20">
+                      {parsedData.metadata.rowCount - processResult.length} Dropped
+                    </span>
+                  )}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  The dataset has been strictly validated, repaired, and structured according to business rules.
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-3 mt-4 sm:mt-0">
+                <button 
+                  onClick={downloadCSV}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                  <DownloadIcon className="w-4 h-4" />
+                  Export CSV
+                </button>
+                <button 
+                  onClick={() => { setProcessResult(null); setParsedData(null); setActiveFile(null); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground text-sm font-medium rounded-md hover:bg-muted/80 transition-colors border border-border"
+                >
+                  <RefreshCwIcon className="w-4 h-4" />
+                  Start Over
+                </button>
+              </div>
             </div>
-            <button 
-              className="px-6 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
-              onClick={() => { setProcessResult(null); setParsedData(null); setActiveFile(null); }}
-            >
-              Start Over
-            </button>
+
+            {/* Table Section */}
+            <div className="flex-1 overflow-hidden p-6 flex flex-col bg-background">
+              <div className="rounded-xl border border-border bg-card shadow-sm flex-1 overflow-hidden flex flex-col">
+                <div className="flex-1 overflow-auto relative scrollbar-thin">
+                  <table className="w-full text-sm text-left border-collapse">
+                    <thead className="text-xs text-muted-foreground uppercase bg-muted/50 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-4 py-3 font-medium border-b border-r border-border bg-muted/95 backdrop-blur shadow-sm w-12 text-center">#</th>
+                        {Object.keys(processResult[0] || {}).map(key => (
+                          <th key={key} className="px-4 py-3 font-medium border-b border-border bg-muted/95 backdrop-blur shadow-sm whitespace-nowrap min-w-[150px]">
+                            {key.replace(/_/g, ' ')}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {processResult.map((row: any, i: number) => (
+                        <tr key={i} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-2 font-medium text-muted-foreground border-r border-border whitespace-nowrap bg-muted/10">
+                            {i + 1}
+                          </td>
+                          {Object.keys(processResult[0] || {}).map(key => (
+                            <td key={key} className="px-4 py-2 break-words min-w-[150px]" title={row[key] || ''}>
+                              {row[key] || <span className="text-muted-foreground/40 italic">empty</span>}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
