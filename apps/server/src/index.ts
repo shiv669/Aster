@@ -95,12 +95,22 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
   const rowsToProcess = parseResult.output.records.slice(0, 30);
   console.log(`API Process: Parsed ${parseResult.output.records.length} rows. Sending ${rowsToProcess.length} rows to AI.`);
   
+  // YAGNI: Native Server-Sent Events (SSE) without Socket.io bloat
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders(); // Force stream to open immediately without buffering
+
   try {
-    const crmRecords = await aiOrchestrator.processDataset(rowsToProcess, 10);
-    res.json({ success: true, data: crmRecords });
+    const crmRecords = await aiOrchestrator.processDataset(rowsToProcess, 10, (processed, total) => {
+      res.write(`data: ${JSON.stringify({ type: 'progress', processed, total })}\n\n`);
+    });
+    res.write(`data: ${JSON.stringify({ type: 'complete', data: crmRecords })}\n\n`);
+    res.end();
   } catch (error: any) {
     console.error("AI Processing Error:", error);
-    res.status(500).json({ success: false, error: error.message });
+    res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+    res.end();
   }
 });
 
