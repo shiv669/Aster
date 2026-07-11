@@ -24,7 +24,7 @@ export class IntelligenceEngine implements Engine<IntelligenceInput, CRMRecord[]
           { role: "system", content: input.systemPrompt },
           { role: "user", content: input.userPrompt }
         ],
-        model: "llama3-70b-8192", // High capacity, highly deterministic model
+        model: "llama-3.3-70b-versatile", // High capacity, highly deterministic modern model
         temperature: 0.0,
         max_tokens: 4000,
         tools: [{
@@ -40,21 +40,21 @@ export class IntelligenceEngine implements Engine<IntelligenceInput, CRMRecord[]
                   items: {
                     type: "object",
                     properties: {
-                      created_at: { type: "string" },
-                      name: { type: "string" },
-                      email: { type: "string" },
-                      country_code: { type: "string" },
-                      mobile_without_country_code: { type: "string" },
-                      company: { type: "string" },
-                      city: { type: "string" },
-                      state: { type: "string" },
-                      country: { type: "string" },
-                      lead_owner: { type: "string" },
-                      crm_status: { type: "string" },
-                      crm_note: { type: "string" },
-                      data_source: { type: "string" },
-                      possession_time: { type: "string" },
-                      description: { type: "string" }
+                      created_at: { type: ["string", "null"] },
+                      name: { type: ["string", "null"] },
+                      email: { type: ["string", "null"] },
+                      country_code: { type: ["string", "null"] },
+                      mobile_without_country_code: { type: ["string", "null"] },
+                      company: { type: ["string", "null"] },
+                      city: { type: ["string", "null"] },
+                      state: { type: ["string", "null"] },
+                      country: { type: ["string", "null"] },
+                      lead_owner: { type: ["string", "null"] },
+                      crm_status: { type: ["string", "null"] },
+                      crm_note: { type: ["string", "null"] },
+                      data_source: { type: ["string", "null"] },
+                      possession_time: { type: ["string", "null"] },
+                      description: { type: ["string", "null"] }
                     }
                   }
                 }

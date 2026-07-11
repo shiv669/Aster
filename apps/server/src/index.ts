@@ -1,8 +1,19 @@
+import fs from 'fs';
+import path from 'path';
 import express from 'express';
 import multer from 'multer';
 import { Readable } from 'stream';
 import { ParserEngine } from '@aster/parser';
 import { BatchOrchestrator } from '@aster/ai';
+
+// YAGNI: Zero-dependency native .env loader
+try {
+  const env = fs.readFileSync(path.resolve(process.cwd(), '.env'), 'utf8');
+  env.split('\n').forEach(line => {
+    const [key, ...vals] = line.split('=');
+    if (key && vals.length) process.env[key.trim()] = vals.join('=').trim().replace(/["']/g, '');
+  });
+} catch (e) {}
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -82,6 +93,7 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
 
   // YAGNI: Slice to 30 rows for real-time demo speed and rate-limit avoidance
   const rowsToProcess = parseResult.output.records.slice(0, 30);
+  console.log(`API Process: Parsed ${parseResult.output.records.length} rows. Sending ${rowsToProcess.length} rows to AI.`);
   
   try {
     const crmRecords = await aiOrchestrator.processDataset(rowsToProcess, 10);

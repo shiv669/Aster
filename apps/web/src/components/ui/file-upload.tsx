@@ -536,7 +536,7 @@ const getFileIcon = (entry: UploadEntry) => {
 export default function DatasetUploader({
   onParseSuccess
 }: {
-  onParseSuccess?: (data: any) => void
+  onParseSuccess?: (data: any, file?: File) => void
 }) {
   // Tunables
   const maxSize = 50 * 1024 * 1024 // 50MB
@@ -671,7 +671,7 @@ export default function DatasetUploader({
         body: formData
       });
       const json = await res.json();
-      if (json.success) onParseSuccess(json.data);
+      if (json.success) onParseSuccess(json.data, file);
     } catch (err) {
       console.error("Preview fetch failed", err);
     }

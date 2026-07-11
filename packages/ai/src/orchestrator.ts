@@ -28,6 +28,8 @@ export class BatchOrchestrator {
       const aiResult = await this.aiEngine.execute(promptResult.output);
       if (aiResult.success && aiResult.output) {
         allRecords.push(...aiResult.output);
+      } else {
+        console.error(`AI Batch Failed for chunk ${i}:`, aiResult.warnings);
       }
 
       if (onProgress) {
