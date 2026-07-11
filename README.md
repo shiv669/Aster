@@ -69,6 +69,6 @@ Configure the proxy environment variable or modify `next.config.mjs` rewrites in
 
 ## Assignment Submission Details
 
-- **Hosted application URL:**
+- **Hosted application URL:** https://aster-eta.vercel.app
 - **GitHub repository URL:** https://github.com/shiv669/Aster
 - **Position you are applying for:** Software Developer Intern
