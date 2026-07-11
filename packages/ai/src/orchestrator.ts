@@ -11,10 +11,14 @@ export class BatchOrchestrator {
     this.promptEngine = new PromptEngine();
   }
 
-  async processDataset(rows: any[], chunkSize: number = 10): Promise<CRMRecord[]> {
+  async processDataset(
+    rows: any[], 
+    chunkSize: number = 10,
+    onProgress?: (processedCount: number, totalCount: number) => void
+  ): Promise<CRMRecord[]> {
     const allRecords: CRMRecord[] = [];
     
-    // Chunking the dataset
+    // YAGNI: Sequential processing to naturally avoid rate limits. No complex queue needed yet.
     for (let i = 0; i < rows.length; i += chunkSize) {
       const chunk = rows.slice(i, i + chunkSize);
       
@@ -24,6 +28,10 @@ export class BatchOrchestrator {
       const aiResult = await this.aiEngine.execute(promptResult.output);
       if (aiResult.success && aiResult.output) {
         allRecords.push(...aiResult.output);
+      }
+
+      if (onProgress) {
+        onProgress(Math.min(i + chunkSize, rows.length), rows.length);
       }
     }
 

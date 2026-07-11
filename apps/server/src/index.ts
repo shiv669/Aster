@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { Readable } from 'stream';
 import { ParserEngine } from '@aster/parser';
+import { BatchOrchestrator } from '@aster/ai';
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -64,6 +65,31 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       previewRows: parseResult.output.records.slice(0, 100) 
     }
   });
+});
+
+const aiOrchestrator = new BatchOrchestrator(process.env.GROQ_API_KEY || '');
+
+// Process endpoint (runs the full AI transformation)
+app.post('/api/process', upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, error: 'No file uploaded' });
+  }
+
+  const parseResult = await parserEngine.execute({ buffer: req.file.buffer });
+  if (!parseResult.success) {
+    return res.status(500).json({ success: false, error: 'Parsing failed' });
+  }
+
+  // YAGNI: Slice to 30 rows for real-time demo speed and rate-limit avoidance
+  const rowsToProcess = parseResult.output.records.slice(0, 30);
+  
+  try {
+    const crmRecords = await aiOrchestrator.processDataset(rowsToProcess, 10);
+    res.json({ success: true, data: crmRecords });
+  } catch (error: any) {
+    console.error("AI Processing Error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 app.listen(Number(port), '0.0.0.0', () => {
