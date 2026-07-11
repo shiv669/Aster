@@ -8,8 +8,6 @@ WORKDIR /app
 
 # Copy workspace configurations to install dependencies globally
 COPY package*.json ./
-COPY turbo.json ./
-COPY tsconfig.json ./
 
 # Copy source code for backend and shared internal packages
 COPY packages ./packages
