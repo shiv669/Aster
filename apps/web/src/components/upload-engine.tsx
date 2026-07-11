@@ -75,7 +75,7 @@ export function UploadEngine() {
     console.log("Triggering AI processing for dataset...");
     
     try {
-      const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:4000' : '');
       const response = await fetch(`${API_BASE}/api/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

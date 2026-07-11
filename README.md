@@ -53,7 +53,7 @@ GROQ_API_KEY=your_api_key_here
 
 ## Deployment
 
-### Backend (Docker / Render / Railway)
+### Backend (Render)
 
 A multi-stage `Dockerfile` is provided in the root directory for deploying the stateless Express backend.
 
