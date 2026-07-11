@@ -27,29 +27,56 @@ export class IntelligenceEngine implements Engine<IntelligenceInput, CRMRecord[]
         model: "llama3-70b-8192", // High capacity, highly deterministic model
         temperature: 0.0,
         max_tokens: 4000,
-        response_format: { type: "json_object" } 
+        tools: [{
+          type: "function",
+          function: {
+            name: "extract_crm_records",
+            description: "Extract the raw rows into CRM records",
+            parameters: {
+              type: "object",
+              properties: {
+                records: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      created_at: { type: "string" },
+                      name: { type: "string" },
+                      email: { type: "string" },
+                      country_code: { type: "string" },
+                      mobile_without_country_code: { type: "string" },
+                      company: { type: "string" },
+                      city: { type: "string" },
+                      state: { type: "string" },
+                      country: { type: "string" },
+                      lead_owner: { type: "string" },
+                      crm_status: { type: "string" },
+                      crm_note: { type: "string" },
+                      data_source: { type: "string" },
+                      possession_time: { type: "string" },
+                      description: { type: "string" }
+                    }
+                  }
+                }
+              },
+              required: ["records"]
+            }
+          }
+        }],
+        tool_choice: { type: "function", function: { name: "extract_crm_records" } } as any
       });
 
-      const responseContent = completion.choices[0]?.message?.content || "{}";
-      
-      let parsed = JSON.parse(responseContent);
-      
-      // If the LLM wraps the array in an object (required by json_object format)
-      if (!Array.isArray(parsed)) {
-        const keys = Object.keys(parsed);
-        if (keys.length === 1 && Array.isArray(parsed[keys[0]])) {
-           parsed = parsed[keys[0]];
-        } else if (parsed.records && Array.isArray(parsed.records)) {
-           parsed = parsed.records;
-        } else {
-           // Best effort fallback
-           parsed = Object.values(parsed).find(Array.isArray) || [];
-        }
+      const toolCall = completion.choices[0]?.message?.tool_calls?.[0];
+      if (!toolCall || !toolCall.function || !toolCall.function.arguments) {
+        throw new Error("Model failed to call the extraction tool");
       }
+      
+      const parsed = JSON.parse(toolCall.function.arguments);
+      const outputRecords = parsed.records || [];
 
       return {
         success: true,
-        output: parsed as CRMRecord[],
+        output: outputRecords as CRMRecord[],
         duration: Date.now() - startTime
       };
     } catch (error: any) {
